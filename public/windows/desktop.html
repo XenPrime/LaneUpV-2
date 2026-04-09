@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LaneUp2 Desktop</title>
+  </head>
+  <body>
+    <script>
+      window.addEventListener('load', () => {
+        if (typeof overwolf !== 'undefined' && overwolf.windows?.obtainDeclaredWindow) {
+          overwolf.windows.obtainDeclaredWindow('background', () => {})
+        }
+
+        window.location.replace('../index.html?shell=desktop&screen=home')
+      })
+    </script>
+  </body>
+</html>
