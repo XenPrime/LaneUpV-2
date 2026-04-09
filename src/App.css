@@ -150,6 +150,12 @@
   gap: 0.65rem;
 }
 
+.welcome-actions-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
 .theme-toggle-label {
   font-size: 0.88rem;
   font-weight: 700;
@@ -688,6 +694,27 @@
   resize: vertical;
 }
 
+.settings-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.settings-field span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.settings-inline-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.settings-inline-copy {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
 .journal-textarea {
   min-height: 110px;
 }
@@ -764,6 +791,10 @@
   color: var(--overlay-text);
 }
 
+.overlay-shell-expanded {
+  max-width: 100%;
+}
+
 .overlay-clock {
   font-size: 1.4rem;
   font-weight: 700;
@@ -800,6 +831,101 @@
   font-size: 0.82rem;
 }
 
+.overlay-reference-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 1rem 0;
+}
+
+.chip-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.draft-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.draft-card {
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--panel-border);
+  background: color-mix(in srgb, var(--panel-bg) 82%, transparent);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.draft-card strong {
+  color: var(--text-primary);
+}
+
+.draft-card span {
+  font-size: 0.85rem;
+  color: var(--eyebrow);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.draft-card p {
+  margin: 0;
+}
+
+.death-zone-chip {
+  display: inline-flex;
+  margin-top: 0.7rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(249, 115, 22, 0.12);
+  color: #f97316;
+}
+
+.death-map-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.death-map-grid {
+  position: relative;
+  min-height: 230px;
+  border-radius: 1.25rem;
+  border: 1px solid var(--panel-border);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.06)),
+    radial-gradient(circle at 30% 25%, rgba(56, 189, 248, 0.16), transparent 16%),
+    radial-gradient(circle at 70% 65%, rgba(34, 197, 94, 0.12), transparent 18%),
+    color-mix(in srgb, var(--panel-bg) 78%, transparent);
+}
+
+.death-dot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: #ef4444;
+  box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.16);
+}
+
+.death-dot-one {
+  top: 36%;
+  left: 48%;
+}
+
+.death-dot-two {
+  top: 65%;
+  left: 22%;
+}
+
+.death-dot-three {
+  top: 28%;
+  left: 68%;
+}
+
 .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -833,7 +959,8 @@
 @media (max-width: 960px) {
   .three-column,
   .two-column,
-  .info-card-grid {
+  .info-card-grid,
+  .overlay-reference-grid {
     grid-template-columns: 1fr;
   }
 

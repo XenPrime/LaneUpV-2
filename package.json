@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:riot": "node ./server/riot-proxy.mjs",
     "build": "tsc -b && vite build --base ./",
     "lint": "eslint .",
     "preview": "vite preview"

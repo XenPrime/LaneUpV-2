@@ -16,11 +16,13 @@ import {
   mockLobbyPreferences,
   mockPostGameSummary,
 } from './data/mockState'
+import { useRiotMatchHistory } from './hooks/useRiotMatchHistory'
 import { useLaneUpRuntime } from './hooks/useLaneUpRuntime'
 import { roles } from './data/roles'
 import type {
   PracticeJournalState,
   ProviderStatus,
+  RiotAccountConfig,
   RoleId,
   RuntimeStatus,
   ScreenId,
@@ -75,6 +77,14 @@ function App() {
     typeof window !== 'undefined'
       ? window.localStorage.getItem('laneup2-practice-journal')
       : null
+  const storedRiotAccount =
+    typeof window !== 'undefined'
+      ? window.localStorage.getItem('laneup2-riot-account')
+      : null
+  const storedRiotInstallPath =
+    typeof window !== 'undefined'
+      ? window.localStorage.getItem('laneup2-riot-install-path')
+      : null
 
   const initialScreen: ScreenId =
     requestedScreen &&
@@ -122,12 +132,39 @@ function App() {
       confidence: 'Building',
     }
   })
+  const [riotAccount, setRiotAccount] = useState<RiotAccountConfig>(() => {
+    if (storedRiotAccount) {
+      try {
+        return JSON.parse(storedRiotAccount) as RiotAccountConfig
+      } catch {
+        return {
+          gameName: '',
+          tagLine: '',
+          regionalRouting: 'americas',
+        }
+      }
+    }
+
+    return {
+      gameName: '',
+      tagLine: '',
+      regionalRouting: 'americas',
+    }
+  })
+  const [riotInstallPath, setRiotInstallPath] = useState<string>(
+    storedRiotInstallPath ?? '',
+  )
+  const [riotHistoryLoadRequestCount, setRiotHistoryLoadRequestCount] = useState(0)
   const [quest, setQuest] = useState(initialQuestState)
   const [selectedRole, setSelectedRole] = useState<RoleId | null>(
     initialQuestState.rolePickedDuringOnboarding,
   )
   const [guideRole, setGuideRole] = useState<RoleId>(quest.activeRole ?? 'utility')
-  const runtime = useLaneUpRuntime(quest)
+  const runtime = useLaneUpRuntime(quest, riotInstallPath)
+  const riotMatchHistory = useRiotMatchHistory(
+    riotAccount,
+    riotHistoryLoadRequestCount,
+  )
 
   const heroSummary = useMemo(() => {
     if (activeScreen === 'champ-select') {
@@ -184,6 +221,20 @@ function App() {
       'laneup2-practice-journal',
       JSON.stringify(nextJournal),
     )
+  }
+
+  const updateRiotAccount = (nextAccount: RiotAccountConfig) => {
+    setRiotAccount(nextAccount)
+    window.localStorage.setItem('laneup2-riot-account', JSON.stringify(nextAccount))
+  }
+
+  const updateRiotInstallPath = (nextPath: string) => {
+    setRiotInstallPath(nextPath)
+    window.localStorage.setItem('laneup2-riot-install-path', nextPath)
+  }
+
+  const requestRiotHistoryLoad = () => {
+    setRiotHistoryLoadRequestCount((count) => count + 1)
   }
 
   return (
@@ -285,10 +336,27 @@ function App() {
           <PostGameScreen
             summary={runtime.postGameSummary ?? mockPostGameSummary}
             sourceLabel={formatProviderStatus('Post-game', runtime.status.lcu)}
+            riotHistoryStatus={riotMatchHistory.status}
+            riotHistoryError={riotMatchHistory.error}
+            resolvedAccount={riotMatchHistory.resolvedAccount}
+            recentMatches={riotMatchHistory.matches}
           />
         ) : null}
 
-        {activeScreen === 'settings' ? <SettingsScreen runtimeStatus={runtime.status} /> : null}
+        {activeScreen === 'settings' ? (
+          <SettingsScreen
+            runtimeStatus={runtime.status}
+            riotAccount={riotAccount}
+            onUpdateRiotAccount={updateRiotAccount}
+            riotInstallPath={riotInstallPath}
+            onUpdateRiotInstallPath={updateRiotInstallPath}
+            onLoadRiotHistory={requestRiotHistoryLoad}
+            riotHistoryStatus={riotMatchHistory.status}
+            resolvedAccount={riotMatchHistory.resolvedAccount}
+            riotHistoryError={riotMatchHistory.error}
+            currentLeagueIdentity={runtime.currentLeagueIdentity}
+          />
+        ) : null}
       </main>
     </div>
   )

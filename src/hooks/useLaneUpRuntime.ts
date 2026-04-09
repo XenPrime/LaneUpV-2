@@ -9,6 +9,7 @@ import {
 import { roles } from '../data/roles'
 import type {
   ChampionSelectState,
+  CurrentLeagueIdentity,
   LiveStats,
   LobbyPreferences,
   PostGameSummary,
@@ -25,6 +26,7 @@ import {
   parseLockfile,
   type LcuCredentials,
   type LcuChampSelectSession,
+  type LcuCurrentSummoner,
   type LcuEogStatsBlock,
   type LcuLobbyResponse,
 } from '../utils/lcu'
@@ -47,6 +49,7 @@ interface RuntimeState {
   championSelect: ChampionSelectState
   liveStats: LiveStats
   postGameSummary: PostGameSummary
+  currentLeagueIdentity: CurrentLeagueIdentity | null
   status: RuntimeStatus
 }
 
@@ -65,31 +68,32 @@ const DEFAULT_STATE: RuntimeState = {
   championSelect: mockChampionSelectState,
   liveStats: mockLiveStats,
   postGameSummary: mockPostGameSummary,
+  currentLeagueIdentity: null,
   status: DEFAULT_STATUS,
 }
 
-function getLockfileCandidates() {
-  const storedInstallPath =
-    typeof window !== 'undefined'
-      ? window.localStorage.getItem('laneup2-riot-install-path')
-      : null
-
+function getLockfileCandidates(installPathOverride?: string) {
   const installCandidates = [
-    storedInstallPath,
+    installPathOverride,
     'C:/Riot Games/League of Legends',
+    'C:/Riot Games/League of Legends/Game',
     'C:/Program Files/Riot Games/League of Legends',
     'C:/Program Files (x86)/Riot Games/League of Legends',
     'D:/Riot Games/League of Legends',
+    'D:/Riot Games/League of Legends/Game',
     'D:/Program Files/Riot Games/League of Legends',
     'D:/Program Files (x86)/Riot Games/League of Legends',
   ].filter(Boolean) as string[]
 
-  return Array.from(new Set(installCandidates)).map((path) =>
-    path.endsWith('/lockfile') ? path : `${path}/lockfile`,
-  )
+  return Array.from(new Set(installCandidates.flatMap((path) => {
+    const normalizedPath = path.replace(/\\/g, '/').replace(/\/$/, '')
+    return normalizedPath.endsWith('/lockfile')
+      ? [normalizedPath]
+      : [normalizedPath, `${normalizedPath}/lockfile`]
+  })))
 }
 
-async function resolveLcuCredentials(): Promise<{
+async function resolveLcuCredentials(installPathOverride?: string): Promise<{
   credentials: LcuCredentials
   lockfilePath: string
 } | null> {
@@ -97,7 +101,7 @@ async function resolveLcuCredentials(): Promise<{
     return null
   }
 
-  for (const path of getLockfileCandidates()) {
+  for (const path of getLockfileCandidates(installPathOverride)) {
     const content = await readFileUtf8(path)
     if (!content) {
       continue
@@ -159,8 +163,34 @@ function buildLiveStats(
     gold: Math.round(snapshot.activePlayer.currentGold ?? 0),
     gameTime: formatGameClock(seconds),
     currentPhase: phase,
-    tipHeadline: `${role.name} ${phase.toLowerCase()} focus`,
-    tipBody: rolePhaseTip,
+    roleFocus: `${role.name} ${phase.toLowerCase()} focus: ${rolePhaseTip}`,
+    laneState:
+      phase === 'Early'
+        ? 'Lane fundamentals still matter most. Farm, spacing, and safe trades come first.'
+        : phase === 'Mid'
+          ? 'Wave control and grouped movement matter more than isolated skirmishes.'
+          : 'Deaths become more expensive now, so setup and positioning are higher value.',
+    csTarget:
+      roleId === 'utility'
+        ? 'CS is secondary for Support. Track map presence, wards, and safe movement instead.'
+        : `Use CS as a neutral benchmark for ${phase.toLowerCase()} game discipline rather than a hard command.`,
+    objectiveWindow:
+      phase === 'Early'
+        ? 'Think about the next objective by preparing the map early, not by forcing action.'
+        : phase === 'Mid'
+          ? 'Mid game is usually about arriving on time with vision and teammates.'
+          : 'Late game objective setup matters more than one extra risky wave.',
+    positioningCue:
+      roleId === 'bottom'
+        ? 'Stay on the safe side of the fight and hit what is reachable without stepping into danger first.'
+        : roleId === 'utility'
+          ? 'Stand where you can protect teammates without becoming the easiest engage target.'
+          : 'Play from visible, safer space before you commit deeper into fog or choke points.',
+    referenceNotes: [
+      'This overlay should stay descriptive and educational, not reactive or commanding.',
+      'Use it as a quick reminder layer during pauses in attention, not as a second minimap.',
+      `${role.name} fundamentals still matter more than fancy reads when the game gets messy.`,
+    ],
   }
 }
 
@@ -257,12 +287,38 @@ function buildPostGameSummary(
   return {
     result,
     grade,
+    matchStory:
+      deaths >= 6
+        ? 'The game stayed playable, but repeated deaths pulled tempo away from your stronger moments and objective setups.'
+        : 'Your game held together because your mistakes stayed limited enough for the rest of your decisions to matter.',
     strengths: strengths.slice(0, 3),
     focusNextGame: focusNextGame.slice(0, 3),
+    deathPatterns: [
+      {
+        title: 'Objective timing death',
+        detail:
+          'One or more deaths likely came from staying on the map too long before a major fight window.',
+        mapZone: 'River approach',
+      },
+      {
+        title: 'Transition death',
+        detail:
+          'The risky moments happened while moving between lane and river rather than during clean setup.',
+        mapZone: 'Lane-to-river path',
+      },
+      {
+        title: 'Vision gap death',
+        detail:
+          'At least one death pattern suggests moving into space before information was secured.',
+        mapZone: 'Fog edge',
+      },
+    ],
+    deathMapSummary:
+      'Without exact coordinates yet, the review should still explain the likely type of death pattern and what game-state mistake caused it.',
   }
 }
 
-export function useLaneUpRuntime(quest: QuestState) {
+export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
   const [runtime, setRuntime] = useState<RuntimeState>(DEFAULT_STATE)
   const runtimeRef = useRef(runtime)
   const lcuRef = useRef<LcuCredentials | null>(null)
@@ -301,9 +357,10 @@ export function useLaneUpRuntime(quest: QuestState) {
         let nextChampionSelect = runtimeRef.current.championSelect
         let nextLiveStats = runtimeRef.current.liveStats
         let nextPostGame = runtimeRef.current.postGameSummary
+        let nextCurrentLeagueIdentity = runtimeRef.current.currentLeagueIdentity
 
         if (overwolfReady && !lcuRef.current) {
-          const resolved = await resolveLcuCredentials()
+          const resolved = await resolveLcuCredentials(riotInstallPath)
           if (resolved) {
             lcuRef.current = resolved.credentials
             lockfilePath = resolved.lockfilePath
@@ -315,7 +372,7 @@ export function useLaneUpRuntime(quest: QuestState) {
 
         if (lcuRef.current) {
           try {
-            const [lobbyResponse, sessionResponse, eogResponse] = await Promise.all([
+            const [lobbyResponse, sessionResponse, eogResponse, currentSummonerResponse] = await Promise.all([
               getOptionalJson<LcuLobbyResponse>(
                 lcuRef.current.port,
                 lcuRef.current.password,
@@ -330,6 +387,11 @@ export function useLaneUpRuntime(quest: QuestState) {
                 lcuRef.current.port,
                 lcuRef.current.password,
                 '/lol-end-of-game/v1/eog-stats-block',
+              ),
+              getOptionalJson<LcuCurrentSummoner>(
+                lcuRef.current.port,
+                lcuRef.current.password,
+                '/lol-summoner/v1/current-summoner',
               ),
             ])
 
@@ -356,6 +418,14 @@ export function useLaneUpRuntime(quest: QuestState) {
               )
               if (postGame) {
                 nextPostGame = postGame
+              }
+            }
+
+            if (currentSummonerResponse) {
+              nextCurrentLeagueIdentity = {
+                displayName: currentSummonerResponse.displayName ?? 'League player',
+                gameName: currentSummonerResponse.gameName ?? null,
+                tagLine: currentSummonerResponse.tagLine ?? null,
               }
             }
 
@@ -390,6 +460,7 @@ export function useLaneUpRuntime(quest: QuestState) {
           championSelect: nextChampionSelect,
           liveStats: nextLiveStats,
           postGameSummary: nextPostGame,
+          currentLeagueIdentity: nextCurrentLeagueIdentity,
           status: {
             overwolfAvailable: overwolfReady,
             leagueRunning,
@@ -418,7 +489,7 @@ export function useLaneUpRuntime(quest: QuestState) {
       cleanupListener()
       window.clearInterval(interval)
     }
-  }, [quest])
+  }, [quest, riotInstallPath])
 
   return runtime
 }

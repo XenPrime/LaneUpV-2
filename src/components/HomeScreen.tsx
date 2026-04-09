@@ -16,7 +16,7 @@ const roleSelectorOrder: Array<{ id: RoleId; label: string; icon: string }> = [
 ]
 
 const destinationCards: Array<{
-  screen: Extract<ScreenId, 'guide' | 'builds' | 'profile' | 'faq'>
+  screen: Extract<ScreenId, 'guide' | 'builds' | 'profile' | 'faq' | 'settings'>
   title: string
   description: string
   size: 'hero' | 'medium' | 'small'
@@ -47,6 +47,13 @@ const destinationCards: Array<{
     title: 'FAQ',
     description:
       'Get quick answers about roles, overlays, and what LaneUp is doing for you.',
+    size: 'small',
+  },
+  {
+    screen: 'settings',
+    title: 'Settings',
+    description:
+      'Check runtime health, connect your Riot ID, and verify the local proxy is working.',
     size: 'small',
   },
 ]
@@ -117,19 +124,28 @@ export function HomeScreen({
       >
         <div className="welcome-block">
           <div className="welcome-actions">
-            <label className="theme-toggle" aria-label="Toggle light and dark mode">
-              <span className="theme-toggle-label">
-                {theme === 'light' ? 'Light' : 'Dark'}
-              </span>
+            <div className="welcome-actions-row">
               <button
                 type="button"
-                className={`theme-toggle-switch ${theme === 'dark' ? 'dark' : ''}`}
-                onClick={onToggleTheme}
-                aria-pressed={theme === 'dark'}
+                className="secondary-button"
+                onClick={() => onOpenScreen('settings')}
               >
-                <span className="theme-toggle-knob" />
+                Settings
               </button>
-            </label>
+              <label className="theme-toggle" aria-label="Toggle light and dark mode">
+                <span className="theme-toggle-label">
+                  {theme === 'light' ? 'Light' : 'Dark'}
+                </span>
+                <button
+                  type="button"
+                  className={`theme-toggle-switch ${theme === 'dark' ? 'dark' : ''}`}
+                  onClick={onToggleTheme}
+                  aria-pressed={theme === 'dark'}
+                >
+                  <span className="theme-toggle-knob" />
+                </button>
+              </label>
+            </div>
           </div>
           <p className="eyebrow centered">First login setup</p>
           <h2 className="welcome-title">Welcome to LaneUp</h2>

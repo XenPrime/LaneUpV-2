@@ -44,6 +44,29 @@ npm run dev
 
 Open the local Vite URL in your browser to explore the prototype.
 
+## Temporary Riot dev key setup
+
+For local development with Riot's 24-hour development key, do not put the key
+directly in the frontend. Use the included local proxy instead.
+
+1. Create a local env file based on `.env.example`
+2. Set `RIOT_API_KEY` to your current dev key
+3. Start the proxy:
+
+```bash
+npm run dev:riot
+```
+
+4. In another terminal, run the app:
+
+```bash
+npm run dev
+```
+
+The frontend can then call the local proxy at
+`http://localhost:8787/api/riot`. This keeps the temporary key out of the
+client bundle and out of GitHub.
+
 ## Next recommended steps
 
 1. Scaffold the Overwolf app shell with manifest and window config.

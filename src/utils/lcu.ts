@@ -4,6 +4,8 @@ import type {
   QuestState,
   RoleId,
 } from '../types'
+import { mockChampionSelectState } from '../data/mockState'
+import { roles } from '../data/roles'
 
 export interface LcuCredentials {
   port: string
@@ -21,6 +23,12 @@ export interface LcuChampSelectSession {
 export interface LcuLobbyResponse {
   firstPositionPreference?: string | null
   secondPositionPreference?: string | null
+}
+
+export interface LcuCurrentSummoner {
+  displayName?: string | null
+  gameName?: string | null
+  tagLine?: string | null
 }
 
 export interface LcuEogStatsBlock {
@@ -149,9 +157,15 @@ export function classifyChampionSelectState(
   const isAutofilled = !queuedForAssigned
 
   return {
+    ...mockChampionSelectState,
     assignedPosition,
     isAutofilled,
     mismatchWithQuest,
     shouldNudgeQuest: !hasQuest,
+    queueIntent: {
+      firstChoice: lobby.firstPositionPreference,
+      secondChoice: lobby.secondPositionPreference,
+    },
+    teamCompSummary: `Assigned role is ${roles[assignedPosition].name}. Prep the player for this match first, then preserve the saved quest context for the longer learning path.`,
   }
 }

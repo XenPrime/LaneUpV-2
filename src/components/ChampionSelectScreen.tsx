@@ -8,6 +8,25 @@ interface ChampionSelectScreenProps {
   sourceLabel: string
 }
 
+function getBannerText(
+  quest: QuestState,
+  championSelect: ChampionSelectState,
+) {
+  if (championSelect.shouldNudgeQuest) {
+    return 'No quest is set yet. LaneUp can suggest turning this assigned role into the new learning path after the match.'
+  }
+
+  if (championSelect.isAutofilled) {
+    return 'Autofill or off-role detection should switch the prep view into supportive fallback guidance for this game without throwing away the saved quest.'
+  }
+
+  if (championSelect.mismatchWithQuest && quest.activeRole) {
+    return 'Your saved quest and your current assigned role are different, so champ select should prepare you for this match first and preserve the long-term role plan for later.'
+  }
+
+  return 'Your current role intent and this lobby line up cleanly, so the prep flow can stay focused and simple.'
+}
+
 export function ChampionSelectScreen({
   quest,
   lobby,
@@ -16,30 +35,14 @@ export function ChampionSelectScreen({
 }: ChampionSelectScreenProps) {
   const assignedRole = roles[championSelect.assignedPosition]
   const activeQuestName = quest.activeRole ? roles[quest.activeRole].name : 'None'
-
-  let bannerText =
-    'Normal load. The assigned role matches what the player queued for.'
-
-  if (championSelect.shouldNudgeQuest) {
-    bannerText =
-      'No quest is set, so LaneUp can gently suggest turning this assigned role into a quest after champ select.'
-  } else if (championSelect.isAutofilled && championSelect.mismatchWithQuest) {
-    bannerText =
-      'Autofill plus quest mismatch. Lead with the assigned-role guide, then preserve the original quest for future games.'
-  } else if (championSelect.isAutofilled) {
-    bannerText =
-      'True autofill detected. Show a stronger note and switch the guide to the assigned role right away.'
-  } else if (championSelect.mismatchWithQuest) {
-    bannerText =
-      'Secondary role or mismatch detected. Load the assigned-role guide while keeping the experience supportive instead of alarmist.'
-  }
+  const bannerText = getBannerText(quest, championSelect)
 
   return (
     <section className="screen-stack">
       <div className="section-header">
         <div>
-          <p className="eyebrow">LCU-driven overlay logic</p>
-          <h2>Champion select companion</h2>
+          <p className="eyebrow">Champion select coach</p>
+          <h2>Pregame role and comp prep</h2>
         </div>
         <div className="header-chip-group">
           <span className="pill">{sourceLabel}</span>
@@ -48,52 +51,91 @@ export function ChampionSelectScreen({
       </div>
 
       <div className="callout-banner">
-        <strong>Banner logic</strong>
+        <strong>LaneUp read</strong>
         <p>{bannerText}</p>
       </div>
 
       <div className="three-column">
         <article className="panel">
-          <p className="eyebrow">Active quest</p>
+          <p className="eyebrow">Quest role</p>
           <h3>{activeQuestName}</h3>
-          <p>What the player has been learning in LaneUp.</p>
+          <p>The long-term role the player is trying to learn inside LaneUp.</p>
         </article>
 
         <article className="panel">
-          <p className="eyebrow">Queue preferences</p>
+          <p className="eyebrow">Queue intent</p>
           <h3>
             {roles[lobby.firstPositionPreference].name} /{' '}
             {roles[lobby.secondPositionPreference].name}
           </h3>
-          <p>First and second positions pulled from the lobby state.</p>
+          <p>
+            First and second choices match the player intent layer we want to preserve.
+          </p>
         </article>
 
         <article className="panel">
-          <p className="eyebrow">Assigned position</p>
+          <p className="eyebrow">Assigned role</p>
           <h3>{assignedRole.name}</h3>
-          <p>The role pulled from `assignedPosition` during champ select.</p>
+          <p>Champion select should always prep the player for the actual role they got.</p>
         </article>
       </div>
 
       <div className="two-column">
         <article className="panel">
-          <p className="eyebrow">Guide tab</p>
-          <ul className="bullet-list">
-            <li>Three game phases stay visible for the assigned role.</li>
-            <li>Beginner reminders stay fundamentals-only, not matchup-heavy.</li>
-            <li>Quest state can be updated after the game without blocking this one.</li>
-          </ul>
+          <p className="eyebrow">Your champion</p>
+          <h3>
+            {championSelect.lockInChampion} ({assignedRole.name})
+          </h3>
+          <p>{championSelect.playerJob}</p>
+          <div className="chip-stack">
+            <span className="pill">{championSelect.hoverChampion} hovered</span>
+            <span className="pill">{championSelect.lockInChampion} locked</span>
+          </div>
         </article>
 
         <article className="panel">
-          <p className="eyebrow">Synergy tab</p>
-          <ul className="bullet-list">
-            {assignedRole.synergyPoints.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
+          <p className="eyebrow">Comp identity</p>
+          <h3>{championSelect.teamCompIdentity}</h3>
+          <p>{championSelect.teamCompSummary}</p>
         </article>
       </div>
+
+      <div className="two-column">
+        <article className="panel">
+          <p className="eyebrow">Ally draft view</p>
+          <div className="draft-list">
+            {championSelect.allySlots.map((slot) => (
+              <div key={slot.slotLabel} className="draft-card">
+                <strong>{slot.slotLabel}</strong>
+                <span>{roles[slot.role].name}</span>
+                <p>{slot.champion}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel">
+          <p className="eyebrow">Enemy comp threats</p>
+          <div className="draft-list">
+            {championSelect.enemySlots.map((slot) => (
+              <div key={`${slot.champion}-${slot.role}`} className="draft-card">
+                <strong>{slot.champion}</strong>
+                <span>{roles[slot.role].name}</span>
+                <p>{slot.threat}</p>
+              </div>
+            ))}
+          </div>
+        </article>
+      </div>
+
+      <article className="panel">
+        <p className="eyebrow">Safe guidance</p>
+        <ul className="bullet-list">
+          {championSelect.safeGuidance.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </article>
     </section>
   )
 }

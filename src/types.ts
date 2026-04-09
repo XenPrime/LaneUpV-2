@@ -83,6 +83,31 @@ export interface PracticeJournalState {
   confidence: 'Building' | 'Steady' | 'Ready'
 }
 
+export interface RiotAccountConfig {
+  gameName: string
+  tagLine: string
+  regionalRouting: 'americas' | 'europe' | 'asia' | 'sea'
+}
+
+export interface RiotRecentMatch {
+  matchId: string
+  champion: string
+  queueLabel: string
+  result: 'Victory' | 'Defeat'
+  kills: number
+  deaths: number
+  assists: number
+  roleLabel: string
+  startedAt: string
+  durationLabel: string
+}
+
+export interface CurrentLeagueIdentity {
+  displayName: string
+  gameName: string | null
+  tagLine: string | null
+}
+
 export interface LobbyPreferences {
   firstPositionPreference: RoleId
   secondPositionPreference: RoleId
@@ -93,6 +118,27 @@ export interface ChampionSelectState {
   isAutofilled: boolean
   mismatchWithQuest: boolean
   shouldNudgeQuest: boolean
+  queueIntent: {
+    firstChoice: RoleId
+    secondChoice: RoleId
+  }
+  hoverChampion: string
+  lockInChampion: string
+  teamCompIdentity: string
+  teamCompSummary: string
+  playerJob: string
+  safeGuidance: string[]
+  allySlots: Array<{
+    slotLabel: string
+    champion: string
+    role: RoleId
+    relation: 'self' | 'party' | 'ally'
+  }>
+  enemySlots: Array<{
+    champion: string
+    role: RoleId
+    threat: string
+  }>
 }
 
 export interface LiveStats {
@@ -106,8 +152,12 @@ export interface LiveStats {
   gold: number
   gameTime: string
   currentPhase: 'Early' | 'Mid' | 'Late'
-  tipHeadline: string
-  tipBody: string
+  roleFocus: string
+  laneState: string
+  csTarget: string
+  objectiveWindow: string
+  positioningCue: string
+  referenceNotes: string[]
 }
 
 export interface PostGameSummary {
@@ -115,6 +165,13 @@ export interface PostGameSummary {
   grade: string
   strengths: string[]
   focusNextGame: string[]
+  matchStory: string
+  deathPatterns: Array<{
+    title: string
+    detail: string
+    mapZone: string
+  }>
+  deathMapSummary: string
 }
 
 export type ProviderStatus = 'mock' | 'searching' | 'connected' | 'idle' | 'error'
