@@ -30,7 +30,7 @@ export interface RoleContent {
   id: RoleId
   name: string
   title: string
-  difficulty: 'Easy' | 'Medium' | 'Medium-Hard'
+  difficulty: 'Easy' | 'Low-Medium' | 'Medium' | 'Hard' | 'Very Hard'
   summary: string
   simpleSummary: string
   responsibilityCards: RoleInfoCard[]

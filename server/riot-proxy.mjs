@@ -34,10 +34,11 @@ function loadLocalEnvFile() {
 }
 
 loadLocalEnvFile()
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 const PORT = Number(process.env.RIOT_PROXY_PORT || 8787)
 const API_KEY = process.env.RIOT_API_KEY
+const PROXY_SECRET = process.env.RIOT_PROXY_SECRET
+const ALLOWED_ORIGIN = process.env.RIOT_PROXY_ORIGIN || 'http://localhost:5173'
 
 const ALLOWED_HOSTS = new Set([
   'americas.api.riotgames.com',
@@ -146,11 +147,22 @@ function resolveLcuFromDisk(installPathOverride) {
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
     'Access-Control-Allow-Methods': 'GET,OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Laneup-Proxy-Secret, X-Proxy-Secret',
   })
   response.end(JSON.stringify(payload))
+}
+
+function isAuthorized(request) {
+  if (!PROXY_SECRET) {
+    return false
+  }
+
+  const headerSecret =
+    request.headers['x-laneup-proxy-secret'] || request.headers['x-proxy-secret']
+
+  return typeof headerSecret === 'string' && headerSecret === PROXY_SECRET
 }
 
 function getTargetUrl(requestUrl) {
@@ -187,11 +199,17 @@ function getTargetUrl(requestUrl) {
 const server = createServer(async (request, response) => {
   if (request.method === 'OPTIONS') {
     response.writeHead(204, {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
       'Access-Control-Allow-Methods': 'GET,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers':
+        'Content-Type, X-Laneup-Proxy-Secret, X-Proxy-Secret',
     })
     response.end()
+    return
+  }
+
+  if (!isAuthorized(request)) {
+    sendJson(response, 401, { error: 'Unauthorized: missing or invalid proxy secret.' })
     return
   }
 
@@ -200,6 +218,7 @@ const server = createServer(async (request, response) => {
       ok: true,
       hasKey: Boolean(API_KEY),
       port: PORT,
+      allowedOrigin: ALLOWED_ORIGIN,
     })
     return
   }
@@ -253,9 +272,10 @@ const server = createServer(async (request, response) => {
 
       response.writeHead(lcuResponse.status, {
         'Content-Type': lcuResponse.headers.get('content-type') || 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Access-Control-Allow-Methods': 'GET,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers':
+          'Content-Type, X-Laneup-Proxy-Secret, X-Proxy-Secret',
       })
       response.end(body)
     } catch (requestError) {
@@ -264,6 +284,147 @@ const server = createServer(async (request, response) => {
           requestError instanceof Error
             ? requestError.message
             : 'Unable to call the local League client endpoint.',
+      })
+    }
+    return
+  }
+
+  if (request.url?.startsWith('/lcu/champ-select/session')) {
+    const incomingUrl = new URL(request.url, `http://localhost:${PORT}`)
+    const installPathOverride = incomingUrl.searchParams.get('installPath') || undefined
+    const lcu = resolveLcuFromDisk(installPathOverride)
+
+    if (!lcu) {
+      sendJson(response, 404, {
+        error: 'League client lockfile not found on disk.',
+      })
+      return
+    }
+
+    try {
+      const auth = Buffer.from(`:${lcu.password}`).toString('base64')
+      const lcuResponse = await fetch(
+        `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-champ-select/v1/session`,
+        {
+          headers: {
+            Authorization: `Basic ${auth}`,
+          },
+        },
+      )
+
+      const body = await lcuResponse.text()
+
+      response.writeHead(lcuResponse.status, {
+        'Content-Type': lcuResponse.headers.get('content-type') || 'application/json',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+        'Access-Control-Allow-Methods': 'GET,OPTIONS',
+        'Access-Control-Allow-Headers':
+          'Content-Type, X-Laneup-Proxy-Secret, X-Proxy-Secret',
+      })
+      response.end(body)
+    } catch (requestError) {
+      sendJson(response, 502, {
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : 'Unable to call the local champ select endpoint.',
+      })
+    }
+    return
+  }
+
+  if (request.url?.startsWith('/lcu/lobby')) {
+    const installPathOverride = new URL(request.url, `http://localhost:${PORT}`)
+      .searchParams.get('installPath') || undefined
+    const lcu = resolveLcuFromDisk(installPathOverride)
+
+    if (!lcu) {
+      sendJson(response, 404, {
+        error: 'League client lockfile not found on disk.',
+      })
+      return
+    }
+
+    try {
+      const auth = Buffer.from(`:${lcu.password}`).toString('base64')
+      const lcuResponse = await fetch(
+        `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-lobby/v2/lobby`,
+        {
+          headers: {
+            Authorization: `Basic ${auth}`,
+          },
+        },
+      )
+
+      const body = await lcuResponse.text()
+
+      response.writeHead(lcuResponse.status, {
+        'Content-Type': lcuResponse.headers.get('content-type') || 'application/json',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+        'Access-Control-Allow-Methods': 'GET,OPTIONS',
+        'Access-Control-Allow-Headers':
+          'Content-Type, X-Laneup-Proxy-Secret, X-Proxy-Secret',
+      })
+      response.end(body)
+    } catch (requestError) {
+      sendJson(response, 502, {
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : 'Unable to call the lobby endpoint.',
+      })
+    }
+    return
+  }
+
+  if (request.url?.startsWith('/lcu/league/summoner')) {
+    const incomingUrl = new URL(request.url, `http://localhost:${PORT}`)
+    const idsParam = incomingUrl.searchParams.get('ids')
+    if (!idsParam) {
+      sendJson(response, 400, { error: 'Missing ids query param.' })
+      return
+    }
+
+    const ids = idsParam.split(',').filter(Boolean)
+    const installPathOverride = incomingUrl.searchParams.get('installPath') || undefined
+    const lcu = resolveLcuFromDisk(installPathOverride)
+
+    if (!lcu) {
+      sendJson(response, 404, {
+        error: 'League client lockfile not found on disk.',
+      })
+      return
+    }
+
+    const auth = Buffer.from(`:${lcu.password}`).toString('base64')
+    const results = {}
+
+    try {
+      for (const id of ids) {
+        const rankResponse = await fetch(
+          `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-ranked/v1/league/summoner/${id}`,
+          {
+            headers: {
+              Authorization: `Basic ${auth}`,
+            },
+          },
+        )
+
+        if (!rankResponse.ok) {
+          results[id] = { error: `Rank fetch failed: ${rankResponse.status}` }
+          continue
+        }
+
+        results[id] = await rankResponse.json()
+      }
+
+      sendJson(response, 200, { results })
+    } catch (requestError) {
+      sendJson(response, 502, {
+        error:
+          requestError instanceof Error
+            ? requestError.message
+            : 'Unable to call the local ranked endpoint.',
       })
     }
     return
@@ -304,9 +465,10 @@ const server = createServer(async (request, response) => {
 
       response.writeHead(riotClientResponse.status, {
         'Content-Type': riotClientResponse.headers.get('content-type') || 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
         'Access-Control-Allow-Methods': 'GET,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers':
+          'Content-Type, X-Laneup-Proxy-Secret, X-Proxy-Secret',
       })
       response.end(body)
     } catch (requestError) {
@@ -332,6 +494,13 @@ const server = createServer(async (request, response) => {
     return
   }
 
+  if (!PROXY_SECRET) {
+    sendJson(response, 500, {
+      error: 'RIOT_PROXY_SECRET is not set. Add it to your environment before starting the proxy.',
+    })
+    return
+  }
+
   const { targetUrl, error } = getTargetUrl(request.url)
 
   if (error) {
@@ -343,6 +512,7 @@ const server = createServer(async (request, response) => {
     const riotResponse = await fetch(targetUrl, {
       headers: {
         'X-Riot-Token': API_KEY,
+        'User-Agent': 'LaneUp2-Proxy/1.0',
       },
     })
 
@@ -351,9 +521,10 @@ const server = createServer(async (request, response) => {
 
     response.writeHead(riotResponse.status, {
       'Content-Type': contentType,
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
       'Access-Control-Allow-Methods': 'GET,OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers':
+        'Content-Type, X-Laneup-Proxy-Secret, X-Proxy-Secret',
     })
     response.end(body)
   } catch (requestError) {

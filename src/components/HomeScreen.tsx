@@ -4,6 +4,10 @@ import jungleIcon from '../assets/role-icons/jungle.png'
 import middleIcon from '../assets/role-icons/middle.png'
 import topIcon from '../assets/role-icons/top.png'
 import utilityIcon from '../assets/role-icons/utility.png'
+import difficulty0 from '../assets/Champion_difficulty_0.png'
+import difficulty1 from '../assets/Champion_difficulty_1.png'
+import difficulty2 from '../assets/Champion_difficulty_2.png'
+import difficulty3 from '../assets/Champion_difficulty_3.png'
 import { roles } from '../data/roles'
 import type { QuestState, RoleId, ScreenId } from '../types'
 
@@ -14,6 +18,14 @@ const roleSelectorOrder: Array<{ id: RoleId; label: string; icon: string }> = [
   { id: 'bottom', label: 'ADC', icon: bottomIcon },
   { id: 'utility', label: 'Support', icon: utilityIcon },
 ]
+
+const difficultyIconMap: Record<RoleId, { label: string; icon: string }> = {
+  utility: { label: roles.utility.difficulty, icon: difficulty0 }, // Easy
+  top: { label: roles.top.difficulty, icon: difficulty1 }, // Low-Medium
+  middle: { label: roles.middle.difficulty, icon: difficulty2 }, // Medium
+  bottom: { label: roles.bottom.difficulty, icon: difficulty3 }, // Hard
+  jungle: { label: roles.jungle.difficulty, icon: difficulty3 }, // Very Hard
+}
 
 const destinationCards: Array<{
   screen: Extract<ScreenId, 'guide' | 'builds' | 'profile' | 'faq' | 'settings'>
@@ -179,8 +191,14 @@ export function HomeScreen({
                 <img src={role.icon} alt="" className="role-selector-icon-image" />
               </div>
               <span className="role-selector-name">{role.label}</span>
-              <span className="role-selector-subtitle">
-                {roles[role.id].difficulty}
+              <span className="role-selector-subtitle difficulty-pill">
+                <span className="difficulty-label">Difficulty</span>
+                <img
+                  src={difficultyIconMap[role.id].icon}
+                  alt=""
+                  className="difficulty-icon"
+                />
+                <span className="sr-only">{difficultyIconMap[role.id].label}</span>
               </span>
             </button>
           ))}

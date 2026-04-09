@@ -237,10 +237,12 @@ function App() {
     setRiotHistoryLoadRequestCount((count) => count + 1)
   }
 
+  const showTopBanner = import.meta.env.VITE_SHOW_TOP_BANNER === 'true'
+
   return (
     <div className="app-shell" data-theme={theme}>
       <main className="content-shell">
-        {activeScreen !== 'home' ? (
+        {showTopBanner && activeScreen !== 'home' ? (
           <section className="top-banner">
             <div>
               <p className="eyebrow">Secondary coded prototype</p>
@@ -322,6 +324,7 @@ function App() {
             lobby={runtime.lobby ?? mockLobbyPreferences}
             championSelect={runtime.championSelect ?? mockChampionSelectState}
             sourceLabel={formatProviderStatus('LCU', runtime.status.lcu)}
+            onBackToHome={() => setActiveScreen('home')}
           />
         ) : null}
 

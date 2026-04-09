@@ -56,9 +56,9 @@ interface RuntimeState {
 const DEFAULT_STATUS: RuntimeStatus = {
   overwolfAvailable: false,
   leagueRunning: false,
-  lcu: 'mock',
-  liveClient: 'mock',
-  gameEvents: 'mock',
+  lcu: 'searching',
+  liveClient: 'searching',
+  gameEvents: 'searching',
   lockfilePath: null,
   lastError: null,
 }

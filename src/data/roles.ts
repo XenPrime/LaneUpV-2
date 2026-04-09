@@ -202,7 +202,7 @@ export const roles: Record<RoleId, RoleContent> = {
     id: 'top',
     name: 'Top',
     title: 'The isolated solo lane that becomes a front line or split-push threat.',
-    difficulty: 'Medium',
+    difficulty: 'Low-Medium',
     summary:
       "The isolated 1v1 lane. Top laners duel for lane dominance, use Teleport to impact the rest of the map, and transition into either a split-push threat or a teamfight frontliner depending on their champion.",
     simpleSummary:
@@ -391,7 +391,7 @@ export const roles: Record<RoleId, RoleContent> = {
     id: 'jungle',
     name: 'Jungle',
     title: 'The map-wide role that farms camps, ganks lanes, and secures objectives.',
-    difficulty: 'Medium',
+    difficulty: 'Very Hard',
     summary:
       "The jungler roams the entire map, farming jungle camps for gold and XP while looking for opportunities to gank lanes and secure major objectives like Dragon and Baron. You have no lane — your whole game is about being in the right place at the right time.",
     simpleSummary:
@@ -768,7 +768,7 @@ export const roles: Record<RoleId, RoleContent> = {
     id: 'bottom',
     name: 'ADC',
     title: 'The ranged carry who scales hardest with gold and positioning.',
-    difficulty: 'Medium-Hard',
+    difficulty: 'Hard',
     summary:
       "The ranged carry. You're fragile early, but the most powerful damage dealer in the game once you have items. Your entire early game is one job: farm gold, stay alive, and scale into a late-game win condition.",
     simpleSummary:

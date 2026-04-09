@@ -1,11 +1,14 @@
 import { roles } from '../data/roles'
 import type { ChampionSelectState, LobbyPreferences, QuestState } from '../types'
+import { useLiveChampionSelect } from '../hooks/useLiveChampionSelect'
+import { useLiveLobby } from '../hooks/useLiveLobby'
 
 interface ChampionSelectScreenProps {
   quest: QuestState
   lobby: LobbyPreferences
   championSelect: ChampionSelectState
   sourceLabel: string
+  onBackToHome: () => void
 }
 
 function getBannerText(
@@ -32,10 +35,39 @@ export function ChampionSelectScreen({
   lobby,
   championSelect,
   sourceLabel,
+  onBackToHome,
 }: ChampionSelectScreenProps) {
   const assignedRole = roles[championSelect.assignedPosition]
   const activeQuestName = quest.activeRole ? roles[quest.activeRole].name : 'None'
   const bannerText = getBannerText(quest, championSelect)
+  const live = useLiveChampionSelect()
+  const liveLobby = useLiveLobby()
+
+  if (!live.participants) {
+    return (
+      <section className="screen-stack">
+        <div className="section-header">
+          <div>
+            <p className="eyebrow">Champion select coach</p>
+            <h2>Pregame role and comp prep</h2>
+          </div>
+          <div className="header-chip-group">
+            <span className="pill">{sourceLabel}</span>
+            <span className="pill">Waiting for champ select</span>
+            <button className="secondary-button" type="button" onClick={onBackToHome}>
+              Back to home
+            </button>
+          </div>
+        </div>
+
+        <div className="callout-banner">
+          <strong>Status</strong>
+          <p>Game not detected. Open League champ select to load live data.</p>
+          {live.error ? <p className="error-text">{live.error}</p> : null}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="screen-stack">
@@ -47,6 +79,14 @@ export function ChampionSelectScreen({
         <div className="header-chip-group">
           <span className="pill">{sourceLabel}</span>
           <span className="pill accent">{assignedRole.name} detected</span>
+          {liveLobby.intent ? (
+            <span className="pill">Queue intent: {roles[liveLobby.intent.firstPositionPreference].name} / {roles[liveLobby.intent.secondPositionPreference].name}</span>
+          ) : (
+            <span className="pill">Queue intent: not set</span>
+          )}
+          <button className="secondary-button" type="button" onClick={onBackToHome}>
+            Back to home
+          </button>
         </div>
       </div>
 
@@ -103,28 +143,58 @@ export function ChampionSelectScreen({
       <div className="two-column">
         <article className="panel">
           <p className="eyebrow">Ally draft view</p>
-          <div className="draft-list">
-            {championSelect.allySlots.map((slot) => (
-              <div key={slot.slotLabel} className="draft-card">
-                <strong>{slot.slotLabel}</strong>
-                <span>{roles[slot.role].name}</span>
-                <p>{slot.champion}</p>
-              </div>
-            ))}
-          </div>
+          {live.participants ? (
+            <div className="draft-list">
+              {live.byTeam.allies.map((slot) => (
+                <div key={`${slot.summonerId}`} className="draft-card">
+                  <strong>{slot.summonerName}</strong>
+                  <span>{slot.role ? roles[slot.role].name : 'Unassigned'}</span>
+                  <p>
+                    {slot.rank ?? 'Unranked'}
+                    {slot.winrate ? ` · ${slot.winrate}` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="draft-list">
+              {championSelect.allySlots.map((slot) => (
+                <div key={slot.slotLabel} className="draft-card">
+                  <strong>{slot.slotLabel}</strong>
+                  <span>{roles[slot.role].name}</span>
+                  <p>{slot.champion}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
 
         <article className="panel">
           <p className="eyebrow">Enemy comp threats</p>
-          <div className="draft-list">
-            {championSelect.enemySlots.map((slot) => (
-              <div key={`${slot.champion}-${slot.role}`} className="draft-card">
-                <strong>{slot.champion}</strong>
-                <span>{roles[slot.role].name}</span>
-                <p>{slot.threat}</p>
-              </div>
-            ))}
-          </div>
+          {live.participants ? (
+            <div className="draft-list">
+              {live.byTeam.enemies.map((slot) => (
+                <div key={`${slot.summonerId}`} className="draft-card">
+                  <strong>{slot.summonerName}</strong>
+                  <span>{slot.role ? roles[slot.role].name : 'Unassigned'}</span>
+                  <p>
+                    {slot.rank ?? 'Unranked'}
+                    {slot.winrate ? ` · ${slot.winrate}` : ''}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="draft-list">
+              {championSelect.enemySlots.map((slot) => (
+                <div key={`${slot.champion}-${slot.role}`} className="draft-card">
+                  <strong>{slot.champion}</strong>
+                  <span>{roles[slot.role].name}</span>
+                  <p>{slot.threat}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </article>
       </div>
 
