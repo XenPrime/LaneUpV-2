@@ -72,7 +72,18 @@ const DEFAULT_STATE: RuntimeState = {
   status: DEFAULT_STATUS,
 }
 
-function getLockfileCandidates(installPathOverride?: string) {
+function getLockfileCandidates(
+  installPathOverride?: string,
+  executionPath?: string,
+) {
+  const fromExe = executionPath
+    ? (() => {
+        const normalized = executionPath.replace(/\\/g, '/').replace(/\/[^\/]+\.exe$/i, '')
+        const parent = normalized.replace(/\/Game$/i, '')
+        return [`${normalized}/lockfile`, `${parent}/lockfile`]
+      })()
+    : []
+
   const installCandidates = [
     installPathOverride,
     'C:/Riot Games/League of Legends',
@@ -85,15 +96,22 @@ function getLockfileCandidates(installPathOverride?: string) {
     'D:/Program Files (x86)/Riot Games/League of Legends',
   ].filter(Boolean) as string[]
 
-  return Array.from(new Set(installCandidates.flatMap((path) => {
-    const normalizedPath = path.replace(/\\/g, '/').replace(/\/$/, '')
-    return normalizedPath.endsWith('/lockfile')
-      ? [normalizedPath]
-      : [normalizedPath, `${normalizedPath}/lockfile`]
-  })))
+  const allPaths = [
+    ...fromExe,
+    ...installCandidates.flatMap((path) => {
+      const normalizedPath = path.replace(/\\/g, '/').replace(/\/$/, '')
+      return normalizedPath.endsWith('/lockfile')
+        ? [normalizedPath]
+        : [normalizedPath, `${normalizedPath}/lockfile`]
+    }),
+  ]
+  return Array.from(new Set(allPaths))
 }
 
-async function resolveLcuCredentials(installPathOverride?: string): Promise<{
+async function resolveLcuCredentials(
+  installPathOverride?: string,
+  executionPath?: string,
+): Promise<{
   credentials: LcuCredentials
   lockfilePath: string
 } | null> {
@@ -101,7 +119,7 @@ async function resolveLcuCredentials(installPathOverride?: string): Promise<{
     return null
   }
 
-  for (const path of getLockfileCandidates(installPathOverride)) {
+  for (const path of getLockfileCandidates(installPathOverride, executionPath)) {
     const content = await readFileUtf8(path)
     if (!content) {
       continue
@@ -360,7 +378,10 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
         let nextCurrentLeagueIdentity = runtimeRef.current.currentLeagueIdentity
 
         if (overwolfReady && !lcuRef.current) {
-          const resolved = await resolveLcuCredentials(riotInstallPath)
+          const resolved = await resolveLcuCredentials(
+            riotInstallPath,
+            (runningInfo as { executionPath?: string } | null)?.executionPath,
+          )
           if (resolved) {
             lcuRef.current = resolved.credentials
             lockfilePath = resolved.lockfilePath
@@ -483,7 +504,7 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
     void refresh()
     const interval = window.setInterval(() => {
       void refresh()
-    }, 4000)
+    }, 2000)
 
     return () => {
       cleanupListener()

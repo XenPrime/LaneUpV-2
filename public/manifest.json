@@ -33,39 +33,39 @@
       "start_minimized": true
     }
   ],
-  "data": {
-    "start_window": "desktop",
-    "windows": {
-      "background": {
-        "file": "background.html",
-        "is_background_page": true,
-        "transparent": true,
-        "show_in_taskbar": false,
-        "size": { "width": 0, "height": 0 }
-      },
-      "desktop": {
-        "file": "windows/desktop.html",
-        "transparent": false,
-        "resizable": true,
-        "show_minimize": true,
-        "show_maximize": true,
-        "show_in_taskbar": true,
-        "use_os_windowing": true,
-        "size": { "width": 1480, "height": 920 },
-        "min_size": { "width": 1200, "height": 760 },
-        "max_size": { "width": 2560, "height": 1440 },
-        "keep_window_location": true
-      },
-      "in_game": {
-        "file": "windows/in-game.html",
-        "transparent": true,
-        "resizable": false,
-        "show_in_taskbar": false,
-        "size": { "width": 360, "height": 720 },
-        "clickthrough": false,
-        "keep_window_location": true
-      }
+  "windows": {
+    "background": {
+      "file": "background.html",
+      "is_background_page": true,
+      "transparent": true,
+      "show_in_taskbar": false,
+      "size": { "width": 0, "height": 0 }
     },
+    "desktop": {
+      "file": "windows/desktop.html",
+      "transparent": false,
+      "resizable": true,
+      "show_minimize": true,
+      "show_maximize": true,
+      "show_in_taskbar": true,
+      "use_os_windowing": true,
+      "size": { "width": 1480, "height": 920 },
+      "min_size": { "width": 1200, "height": 760 },
+      "max_size": { "width": 2560, "height": 1440 },
+      "keep_window_location": true
+    },
+    "in_game": {
+      "file": "windows/in-game.html",
+      "transparent": true,
+      "resizable": false,
+      "show_in_taskbar": false,
+      "size": { "width": 360, "height": 720 },
+      "clickthrough": false,
+      "keep_window_location": true
+    }
+  },
+  "data": {
+    "start_window": "background",
     "game_targeting": {
       "type": "dedicated",
       "game_ids": [5426]

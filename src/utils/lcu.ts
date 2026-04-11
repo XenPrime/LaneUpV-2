@@ -52,11 +52,9 @@ export interface LcuEogStatsBlock {
 
 export function parseLockfile(lockfile: string): LcuCredentials {
   const [processName, , port, password, protocol] = lockfile.trim().split(':')
-
   if (!processName || !port || !password || !protocol) {
     throw new Error('Invalid Riot lockfile format.')
   }
-
   return { port, password, protocol }
 }
 
@@ -66,20 +64,75 @@ export function createLcuHeaders(password: string): HeadersInit {
   }
 }
 
+// Unified LCU request helper.
+// In Overwolf context uses overwolf.web.sendHttpRequest which skips the
+// self-signed-cert error that native fetch throws for https://127.0.0.1.
+// Falls back to native fetch for browser preview mode.
+async function lcuRequest(
+  port: string,
+  password: string,
+  endpoint: string,
+): Promise<{ ok: boolean; status: number; json: () => Promise<unknown> } | null> {
+  const url = `https://127.0.0.1:${port}${endpoint}`
+  const authValue = `Basic ${btoa(`:${password}`)}`
+  const ow = typeof window !== 'undefined' ? window.overwolf : undefined
+
+  if (ow?.web?.sendHttpRequest) {
+    return new Promise((resolve) => {
+      ow.web.sendHttpRequest(
+        url,
+        ow.web.enums.HttpRequestMethods.GET,
+        [{ key: 'Authorization', value: authValue }],
+        {},
+        (result) => {
+          if (!result || result.statusCode === 0) {
+            resolve(null)
+            return
+          }
+          resolve({
+            ok: result.statusCode >= 200 && result.statusCode < 300,
+            status: result.statusCode,
+            json: () => {
+              try {
+                return Promise.resolve(JSON.parse(result.data) as unknown)
+              } catch {
+                return Promise.reject(new Error('Invalid JSON from LCU'))
+              }
+            },
+          })
+        },
+      )
+    })
+  }
+
+  // Browser preview fallback — may fail on SSL cert, which is expected outside Overwolf
+  try {
+    const response = await fetch(url, {
+      headers: { Authorization: authValue },
+    })
+    return {
+      ok: response.ok,
+      status: response.status,
+      json: () => response.json() as Promise<unknown>,
+    }
+  } catch {
+    return null
+  }
+}
+
 export async function getJson<T>(
   port: string,
   password: string,
   endpoint: string,
 ): Promise<T> {
-  const response = await fetch(`https://127.0.0.1:${port}${endpoint}`, {
-    headers: createLcuHeaders(password),
-  })
-
-  if (!response.ok) {
-    throw new Error(`LCU request failed: ${response.status}`)
+  const result = await lcuRequest(port, password, endpoint)
+  if (!result) {
+    throw new Error(`LCU request failed: no response for ${endpoint}`)
   }
-
-  return response.json() as Promise<T>
+  if (!result.ok) {
+    throw new Error(`LCU request failed: ${result.status}`)
+  }
+  return result.json() as Promise<T>
 }
 
 export async function getOptionalJson<T>(
@@ -87,19 +140,15 @@ export async function getOptionalJson<T>(
   password: string,
   endpoint: string,
 ): Promise<T | null> {
-  const response = await fetch(`https://127.0.0.1:${port}${endpoint}`, {
-    headers: createLcuHeaders(password),
-  })
-
-  if (response.status === 404 || response.status === 500 || response.status === 503) {
+  const result = await lcuRequest(port, password, endpoint)
+  if (!result) return null
+  if (result.status === 404 || result.status === 500 || result.status === 503) {
     return null
   }
-
-  if (!response.ok) {
-    throw new Error(`LCU request failed: ${response.status}`)
+  if (!result.ok) {
+    throw new Error(`LCU request failed: ${result.status}`)
   }
-
-  return response.json() as Promise<T>
+  return result.json() as Promise<T>
 }
 
 export function normalizeRoleId(value?: string | null): RoleId | null {
@@ -151,7 +200,6 @@ export function classifyChampionSelectState(
   const queuedForAssigned =
     lobby.firstPositionPreference === assignedPosition ||
     lobby.secondPositionPreference === assignedPosition
-
   const hasQuest = quest.activeRole !== null
   const mismatchWithQuest = hasQuest && quest.activeRole !== assignedPosition
   const isAutofilled = !queuedForAssigned

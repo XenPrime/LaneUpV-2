@@ -4,11 +4,19 @@ interface OverwolfRunningGameInfo {
   id?: number
   isRunning?: boolean
   title?: string
+  executionPath?: string
+  processPath?: string
 }
 
 interface OverwolfFileReadResult {
   success: boolean
   content?: string
+}
+
+interface OverwolfHttpResult {
+  status: string
+  statusCode: number
+  data: string
 }
 
 interface OverwolfApi {
@@ -31,6 +39,21 @@ interface OverwolfApi {
       path: string,
       encoding: string,
       callback: (result: OverwolfFileReadResult) => void,
+    ) => void
+  }
+  web: {
+    enums: {
+      HttpRequestMethods: {
+        GET: string
+        POST: string
+      }
+    }
+    sendHttpRequest: (
+      url: string,
+      method: string,
+      headers: Array<{ key: string; value: string }>,
+      data: object,
+      callback: (result: OverwolfHttpResult) => void,
     ) => void
   }
 }
