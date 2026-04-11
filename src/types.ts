@@ -187,6 +187,19 @@ export interface PostGameSummary {
   deathMapSummary: string
 }
 
+export type GameflowState =
+  | 'None'
+  | 'Lobby'
+  | 'Matchmaking'
+  | 'ReadyCheck'
+  | 'ChampSelect'
+  | 'GameStart'
+  | 'InProgress'
+  | 'WaitingForStats'
+  | 'PreEndOfGame'
+  | 'EndOfGame'
+  | 'TerminatedInError'
+
 export type ProviderStatus = 'mock' | 'searching' | 'connected' | 'idle' | 'error'
 
 export interface RuntimeStatus {
@@ -197,6 +210,7 @@ export interface RuntimeStatus {
   gameEvents: ProviderStatus
   lockfilePath: string | null
   lastError: string | null
+  gameflowState: GameflowState
   enemyChampions: string[]
   laneOpponent: string | null
   matchup: MatchupInfo | null

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { ChampionStatsScreen } from './components/ChampionStatsScreen'
 import { ChampionSelectScreen } from './components/ChampionSelectScreen'
@@ -20,6 +20,7 @@ import { useRiotMatchHistory } from './hooks/useRiotMatchHistory'
 import { useLaneUpRuntime } from './hooks/useLaneUpRuntime'
 import { roles } from './data/roles'
 import type {
+  GameflowState,
   PracticeJournalState,
   ProviderStatus,
   RiotAccountConfig,
@@ -161,6 +162,45 @@ function App() {
   )
   const [guideRole, setGuideRole] = useState<RoleId>(quest.activeRole ?? 'utility')
   const runtime = useLaneUpRuntime(quest, riotInstallPath)
+
+  // ── Gameflow auto-navigation ──────────────────────────────────────────
+  // Maps LCU gameflow states to app screens. When the state changes we
+  // automatically switch the active screen so the user never has to
+  // manually navigate between champion select, in-game, and post-game.
+  const prevGameflowRef = useRef<GameflowState>('None')
+  useEffect(() => {
+    const current = runtime.gameflowState
+    const prev = prevGameflowRef.current
+    if (current === prev) return
+    prevGameflowRef.current = current
+
+    switch (current) {
+      case 'ChampSelect':
+        setActiveScreen('champ-select')
+        break
+      case 'GameStart':
+      case 'InProgress':
+        setActiveScreen('in-game')
+        break
+      case 'WaitingForStats':
+      case 'PreEndOfGame':
+      case 'EndOfGame':
+        setActiveScreen('post-game')
+        break
+      case 'Lobby':
+      case 'None':
+      case 'TerminatedInError':
+        // Return to home only if we were in a game screen
+        if (['champ-select', 'in-game', 'post-game'].includes(activeScreen)) {
+          setActiveScreen('home')
+        }
+        break
+      default:
+        break
+    }
+  }, [runtime.gameflowState])
+  // ─────────────────────────────────────────────────────────────────────
+
   const riotMatchHistory = useRiotMatchHistory(
     riotAccount,
     riotHistoryLoadRequestCount,
@@ -338,6 +378,7 @@ function App() {
         {activeScreen === 'post-game' ? (
           <PostGameScreen
             summary={runtime.postGameSummary ?? mockPostGameSummary}
+            isMockData={runtime.status.lcu !== 'connected'}
             sourceLabel={formatProviderStatus('Post-game', runtime.status.lcu)}
             riotHistoryStatus={riotMatchHistory.status}
             riotHistoryError={riotMatchHistory.error}

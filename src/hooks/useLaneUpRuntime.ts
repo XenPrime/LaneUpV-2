@@ -26,6 +26,7 @@ import {
   normalizeRoleId,
   parseLockfile,
   CHAMPION_ID_TO_NAME,
+  getGameflowState,
   type LcuCredentials,
   type LcuChampSelectSession,
   type LcuCurrentSummoner,
@@ -57,6 +58,7 @@ interface RuntimeState {
   enemyChampions: string[]
   laneOpponent: string | null
   matchup: MatchupInfo | null
+  gameflowState: GameflowState
   status: RuntimeStatus
 }
 
@@ -79,6 +81,7 @@ const DEFAULT_STATE: RuntimeState = {
   enemyChampions: [],
   laneOpponent: null,
   matchup: null,
+  gameflowState: 'None' as GameflowState,
   status: DEFAULT_STATUS,
 }
 
@@ -394,6 +397,7 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
   const runtimeRef = useRef(runtime)
   const lcuRef = useRef<LcuCredentials | null>(null)
   const pollingRef = useRef(false)
+  const eogFiredRef = useRef(false)
 
   useEffect(() => {
     runtimeRef.current = runtime
@@ -431,6 +435,7 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
         let nextCurrentLeagueIdentity = runtimeRef.current.currentLeagueIdentity
 
         // Matchup tracking
+        let nextGameflowState: GameflowState = runtimeRef.current.gameflowState
         let nextEnemyChampions: string[] = runtimeRef.current.enemyChampions
         let nextLaneOpponent: string | null = runtimeRef.current.laneOpponent
         let nextMatchup: MatchupInfo | null = runtimeRef.current.matchup
@@ -500,7 +505,38 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
               }
             }
 
-            if (currentSummonerResponse) {
+            // Poll gameflow state
+          const rawGameflow = await getGameflowState(
+            lcuRef.current.port,
+            lcuRef.current.password,
+          )
+          nextGameflowState = (rawGameflow ?? runtimeRef.current.gameflowState) as GameflowState
+
+          // Immediately grab EOG stats when game ends — the window is short
+          if (
+            (nextGameflowState === 'EndOfGame' ||
+              nextGameflowState === 'PreEndOfGame' ||
+              nextGameflowState === 'WaitingForStats') &&
+            !eogFiredRef.current
+          ) {
+            eogFiredRef.current = true
+            const eogNow = await getOptionalJson<LcuEogStatsBlock>(
+              lcuRef.current.port,
+              lcuRef.current.password,
+              '/lol-end-of-game/v1/eog-stats-block',
+            )
+            if (eogNow) {
+              const postGame = buildPostGameSummary(
+                eogNow,
+                getRoleForLiveTips(quest, runtimeRef.current.championSelect),
+              )
+              if (postGame) {
+                nextPostGame = postGame
+              }
+            }
+          }
+
+          if (currentSummonerResponse) {
               nextCurrentLeagueIdentity = {
                 displayName: currentSummonerResponse.displayName ?? 'League player',
                 gameName: currentSummonerResponse.gameName ?? null,
@@ -580,6 +616,7 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
           enemyChampions: nextEnemyChampions,
           laneOpponent: nextLaneOpponent,
           matchup: nextMatchup,
+          gameflowState: nextGameflowState,
           status: {
             overwolfAvailable: overwolfReady,
             leagueRunning,
@@ -618,6 +655,7 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
     enemyChampions: runtime.enemyChampions,
     laneOpponent: runtime.laneOpponent,
     matchup: runtime.matchup,
+    gameflowState: runtime.gameflowState,
   }
   return runtimeWithMatchup
 }

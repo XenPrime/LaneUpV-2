@@ -259,3 +259,15 @@ export const CHAMPION_ID_TO_NAME: Record<number, string> = {
   901: 'Smolder', 902: 'Milio', 910: 'Hwei', 950: 'Naafiri',
   10: 'Kayle', 875: 'Sett', 163: 'Taliyah', 420: 'Illaoi',
 }
+
+// Gameflow state — the LCU's authoritative current screen/state string
+export async function getGameflowState(
+  port: string,
+  password: string,
+): Promise<string | null> {
+  const result = await lcuRequest(port, password, '/lol-gameflow/v1/gamestate')
+  if (!result || !result.ok) return null
+  const raw = await result.json()
+  // LCU returns a quoted string like '"ChampSelect"' — strip quotes
+  return typeof raw === 'string' ? raw.replace(/^"|"$/g, '') : null
+}

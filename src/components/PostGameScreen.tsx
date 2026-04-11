@@ -3,6 +3,7 @@ import type { PostGameSummary, RiotRecentMatch } from '../types'
 interface PostGameScreenProps {
   summary: PostGameSummary
   sourceLabel: string
+  isMockData?: boolean
   riotHistoryStatus: 'idle' | 'searching' | 'connected' | 'error'
   riotHistoryError: string | null
   resolvedAccount: string | null
@@ -16,6 +17,7 @@ export function PostGameScreen({
   riotHistoryError,
   resolvedAccount,
   recentMatches,
+  isMockData = false,
 }: PostGameScreenProps) {
   return (
     <section className="screen-stack">
@@ -26,6 +28,15 @@ export function PostGameScreen({
         </div>
         <div className="header-chip-group">
           <span className="pill">{sourceLabel}</span>
+          {isMockData ? (
+            <span className="pill" style={{ color: 'var(--muted)', borderColor: 'var(--border)' }}>
+              Preview data
+            </span>
+          ) : (
+            <span className="pill" style={{ color: 'var(--green)', borderColor: 'var(--green-border)' }}>
+              Live data
+            </span>
+          )}
           <span className={`pill ${summary.result === 'Victory' ? 'win' : 'loss'}`}>
             {summary.result} • {summary.grade}
           </span>
