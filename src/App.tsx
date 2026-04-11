@@ -322,6 +322,9 @@ function App() {
             lobby={runtime.lobby ?? mockLobbyPreferences}
             championSelect={runtime.championSelect ?? mockChampionSelectState}
             sourceLabel={formatProviderStatus('LCU', runtime.status.lcu)}
+            matchup={runtime.matchup}
+            laneOpponent={runtime.laneOpponent}
+            enemyChampions={runtime.enemyChampions}
           />
         ) : null}
 

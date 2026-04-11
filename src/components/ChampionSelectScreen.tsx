@@ -1,30 +1,33 @@
 import { roles } from '../data/roles'
-import type { ChampionSelectState, LobbyPreferences, QuestState } from '../types'
+import type { ChampionSelectState, LobbyPreferences, MatchupInfo, QuestState } from '../types'
 
 interface ChampionSelectScreenProps {
   quest: QuestState
   lobby: LobbyPreferences
   championSelect: ChampionSelectState
   sourceLabel: string
+  matchup?: MatchupInfo | null
+  laneOpponent?: string | null
+  enemyChampions?: string[]
 }
 
-function getBannerText(
-  quest: QuestState,
-  championSelect: ChampionSelectState,
-) {
+const THREAT_COLORS: Record<string, string> = {
+  High: '#e05252',
+  Medium: '#e8a020',
+  Low: '#2db87a',
+}
+
+function getBannerText(quest: QuestState, championSelect: ChampionSelectState) {
   if (championSelect.shouldNudgeQuest) {
     return 'No quest is set yet. LaneUp can suggest turning this assigned role into the new learning path after the match.'
   }
-
   if (championSelect.isAutofilled) {
-    return 'Autofill or off-role detection should switch the prep view into supportive fallback guidance for this game without throwing away the saved quest.'
+    return 'Autofill detected. Your guide will focus on surviving this game rather than your quest role.'
   }
-
   if (championSelect.mismatchWithQuest && quest.activeRole) {
-    return 'Your saved quest and your current assigned role are different, so champ select should prepare you for this match first and preserve the long-term role plan for later.'
+    return 'Your quest role and assigned role differ. LaneUp will prep you for this match first and preserve your quest for later.'
   }
-
-  return 'Your current role intent and this lobby line up cleanly, so the prep flow can stay focused and simple.'
+  return 'Your queue intent and assigned role match. Stay focused on the game plan.'
 }
 
 export function ChampionSelectScreen({
@@ -32,17 +35,21 @@ export function ChampionSelectScreen({
   lobby,
   championSelect,
   sourceLabel,
+  matchup,
+  laneOpponent,
+  enemyChampions = [],
 }: ChampionSelectScreenProps) {
   const assignedRole = roles[championSelect.assignedPosition]
   const activeQuestName = quest.activeRole ? roles[quest.activeRole].name : 'None'
   const bannerText = getBannerText(quest, championSelect)
+  const threatColor = matchup ? THREAT_COLORS[matchup.threatLevel] : '#5a6382'
 
   return (
     <section className="screen-stack">
       <div className="section-header">
         <div>
           <p className="eyebrow">Champion select coach</p>
-          <h2>Pregame role and comp prep</h2>
+          <h2>Pregame prep</h2>
         </div>
         <div className="header-chip-group">
           <span className="pill">{sourceLabel}</span>
@@ -59,26 +66,92 @@ export function ChampionSelectScreen({
         <article className="panel">
           <p className="eyebrow">Quest role</p>
           <h3>{activeQuestName}</h3>
-          <p>The long-term role the player is trying to learn inside LaneUp.</p>
+          <p>The role you are trying to learn inside LaneUp.</p>
         </article>
-
         <article className="panel">
           <p className="eyebrow">Queue intent</p>
           <h3>
             {roles[lobby.firstPositionPreference].name} /{' '}
             {roles[lobby.secondPositionPreference].name}
           </h3>
-          <p>
-            First and second choices match the player intent layer we want to preserve.
-          </p>
+          <p>Your first and second position preferences.</p>
         </article>
-
         <article className="panel">
           <p className="eyebrow">Assigned role</p>
           <h3>{assignedRole.name}</h3>
-          <p>Champion select should always prep the player for the actual role they got.</p>
+          <p>LaneUp always preps you for the role you actually got.</p>
         </article>
       </div>
+
+      {/* Matchup section — primary focus of this screen */}
+      {matchup ? (
+        <article className="panel">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <p className="eyebrow" style={{ margin: 0 }}>
+              Lane matchup — vs {matchup.championName}
+            </p>
+            <span
+              className="pill"
+              style={{ background: `${threatColor}22`, color: threatColor, borderColor: `${threatColor}44` }}
+            >
+              {matchup.threatLevel} threat
+            </span>
+            <span className="pill" style={{ fontSize: '10px', marginLeft: 'auto' }}>
+              {matchup.archetype}
+            </span>
+          </div>
+
+          <div className="overlay-reference-grid">
+            <div className="tip-card">
+              <p className="eyebrow">Watch out for</p>
+              <p>{matchup.watchOut}</p>
+            </div>
+            <div className="tip-card">
+              <p className="eyebrow">How to win</p>
+              <p>{matchup.winCondition}</p>
+            </div>
+            <div className="tip-card">
+              <p className="eyebrow">Trading tip</p>
+              <p>{matchup.tradingTip}</p>
+            </div>
+            <div className="tip-card">
+              <p className="eyebrow">Early game plan</p>
+              <p>{matchup.phaseTips?.early ?? matchup.currentPhaseTip}</p>
+            </div>
+          </div>
+
+          {enemyChampions.length > 1 && (
+            <div style={{ marginTop: '12px' }}>
+              <p className="eyebrow" style={{ marginBottom: '6px' }}>
+                Other enemies detected
+              </p>
+              <div className="chip-stack">
+                {enemyChampions
+                  .filter((c) => c !== matchup.championName)
+                  .map((champ) => (
+                    <span key={champ} className="pill">
+                      {champ}
+                    </span>
+                  ))}
+              </div>
+            </div>
+          )}
+        </article>
+      ) : laneOpponent ? (
+        <article className="panel">
+          <p className="eyebrow">vs {laneOpponent}</p>
+          <p style={{ color: 'var(--muted)' }}>
+            Full matchup tips will load once both teams lock in their champions.
+          </p>
+        </article>
+      ) : (
+        <article className="panel">
+          <p className="eyebrow">Matchup tips</p>
+          <p style={{ color: 'var(--muted)' }}>
+            Waiting for enemy picks. Matchup tips will appear as champions are locked in.
+          </p>
+        </article>
+      )}
 
       <div className="two-column">
         <article className="panel">
@@ -92,39 +165,10 @@ export function ChampionSelectScreen({
             <span className="pill">{championSelect.lockInChampion} locked</span>
           </div>
         </article>
-
         <article className="panel">
           <p className="eyebrow">Comp identity</p>
           <h3>{championSelect.teamCompIdentity}</h3>
           <p>{championSelect.teamCompSummary}</p>
-        </article>
-      </div>
-
-      <div className="two-column">
-        <article className="panel">
-          <p className="eyebrow">Ally draft view</p>
-          <div className="draft-list">
-            {championSelect.allySlots.map((slot) => (
-              <div key={slot.slotLabel} className="draft-card">
-                <strong>{slot.slotLabel}</strong>
-                <span>{roles[slot.role].name}</span>
-                <p>{slot.champion}</p>
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="panel">
-          <p className="eyebrow">Enemy comp threats</p>
-          <div className="draft-list">
-            {championSelect.enemySlots.map((slot) => (
-              <div key={`${slot.champion}-${slot.role}`} className="draft-card">
-                <strong>{slot.champion}</strong>
-                <span>{roles[slot.role].name}</span>
-                <p>{slot.threat}</p>
-              </div>
-            ))}
-          </div>
         </article>
       </div>
 

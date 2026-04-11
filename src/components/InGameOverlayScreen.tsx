@@ -1,20 +1,32 @@
-import type { LiveStats } from '../types'
+import type { LiveStats, MatchupInfo } from '../types'
 
 interface InGameOverlayScreenProps {
   liveStats: LiveStats
   sourceLabel: string
+  matchup?: MatchupInfo | null
+  laneOpponent?: string | null
+}
+
+const THREAT_COLORS: Record<string, string> = {
+  High: '#e05252',
+  Medium: '#e8a020',
+  Low: '#2db87a',
 }
 
 export function InGameOverlayScreen({
   liveStats,
   sourceLabel,
+  matchup,
+  laneOpponent,
 }: InGameOverlayScreenProps) {
+  const threatColor = matchup ? THREAT_COLORS[matchup.threatLevel] : '#5a6382'
+
   return (
     <section className="screen-stack">
       <div className="section-header">
         <div>
           <p className="eyebrow">In-game overlay</p>
-          <h2>Toggleable reference panel</h2>
+          <h2>Live reference panel</h2>
         </div>
         <div className="header-chip-group">
           <span className="pill">{sourceLabel}</span>
@@ -22,26 +34,7 @@ export function InGameOverlayScreen({
         </div>
       </div>
 
-      <div className="two-column">
-        <article className="panel">
-          <p className="eyebrow">Compliant overlay intent</p>
-          <ul className="bullet-list">
-            <li>User-opened reference window with a hotkey toggle.</li>
-            <li>Educational cues and neutral benchmarks instead of live commands.</li>
-            <li>Compact placement away from minimap, score, shop, and ability bar.</li>
-          </ul>
-        </article>
-
-        <article className="panel">
-          <p className="eyebrow">Current read</p>
-          <ul className="bullet-list">
-            <li>{liveStats.roleFocus}</li>
-            <li>{liveStats.laneState}</li>
-            <li>{liveStats.objectiveWindow}</li>
-          </ul>
-        </article>
-      </div>
-
+      {/* Live stat cards */}
       <div className="overlay-shell overlay-shell-expanded">
         <div className="overlay-top">
           <div>
@@ -73,42 +66,86 @@ export function InGameOverlayScreen({
             <strong>{liveStats.gold}</strong>
           </div>
         </div>
+      </div>
 
-        <div className="overlay-reference-grid">
-          <div className="tip-card">
-            <p className="eyebrow">CS benchmark</p>
-            <p>{liveStats.csTarget}</p>
+      {/* Smart live tips */}
+      <div className="two-column">
+        <article className="panel">
+          <p className="eyebrow">CS pace</p>
+          <p>{liveStats.csPaceTip}</p>
+        </article>
+        <article className="panel">
+          <p className="eyebrow">Kill participation</p>
+          <p>{liveStats.kpTip}</p>
+        </article>
+      </div>
+      <div className="two-column">
+        <article className="panel">
+          <p className="eyebrow">Vision</p>
+          <p>{liveStats.visionTip}</p>
+        </article>
+        <article className="panel">
+          <p className="eyebrow">{liveStats.currentPhase} game focus</p>
+          <p>{liveStats.roleFocus}</p>
+        </article>
+      </div>
+
+      {/* Matchup panel — shown when a lane opponent is known */}
+      {matchup ? (
+        <article className="panel">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+            <p className="eyebrow" style={{ margin: 0 }}>
+              vs {matchup.championName}
+            </p>
+            <span
+              className="pill"
+              style={{ background: `${threatColor}22`, color: threatColor, borderColor: `${threatColor}44` }}
+            >
+              {matchup.threatLevel} threat
+            </span>
+            <span className="pill" style={{ marginLeft: 'auto', fontSize: '10px' }}>
+              {matchup.archetype}
+            </span>
           </div>
 
-          <div className="tip-card">
-            <p className="eyebrow">Objective setup</p>
-            <p>{liveStats.objectiveWindow}</p>
+          <div className="overlay-reference-grid">
+            <div className="tip-card">
+              <p className="eyebrow">Watch out</p>
+              <p>{matchup.watchOut}</p>
+            </div>
+            <div className="tip-card">
+              <p className="eyebrow">Win condition</p>
+              <p>{matchup.winCondition}</p>
+            </div>
+            <div className="tip-card">
+              <p className="eyebrow">Trading tip</p>
+              <p>{matchup.tradingTip}</p>
+            </div>
+            <div className="tip-card">
+              <p className="eyebrow">{matchup.championName} this phase</p>
+              <p>{matchup.currentPhaseTip}</p>
+            </div>
           </div>
+        </article>
+      ) : laneOpponent ? (
+        <article className="panel">
+          <p className="eyebrow">vs {laneOpponent}</p>
+          <p style={{ color: 'var(--muted)' }}>
+            Matchup tips will appear once champion lock-in is complete.
+          </p>
+        </article>
+      ) : (
+        <article className="panel">
+          <p className="eyebrow">Matchup tips</p>
+          <p style={{ color: 'var(--muted)' }}>
+            Enemy champion not yet detected. Tips will appear once the game loads lane assignments.
+          </p>
+        </article>
+      )}
 
-          <div className="tip-card">
-            <p className="eyebrow">Positioning</p>
-            <p>{liveStats.positioningCue}</p>
-          </div>
-
-          <div className="tip-card">
-            <p className="eyebrow">Phase focus</p>
-            <p>{liveStats.roleFocus}</p>
-          </div>
-        </div>
-
-        <div className="tip-card">
-          <p className="eyebrow">Reference notes</p>
-          <ul className="bullet-list">
-            {liveStats.referenceNotes.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="overlay-footer">
-          <span>Hotkey: `Ctrl + Shift + Space`</span>
-          <span>Open manually, use as reference, close fast</span>
-        </div>
+      <div className="overlay-footer">
+        <span>Hotkey: Ctrl + Shift + Space</span>
+        <span>Open as reference · close fast</span>
       </div>
     </section>
   )

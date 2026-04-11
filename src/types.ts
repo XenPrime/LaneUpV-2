@@ -141,6 +141,16 @@ export interface ChampionSelectState {
   }>
 }
 
+export interface MatchupInfo {
+  championName: string
+  archetype: string
+  threatLevel: 'Low' | 'Medium' | 'High'
+  tradingTip: string
+  watchOut: string
+  winCondition: string
+  currentPhaseTip: string
+}
+
 export interface LiveStats {
   champion: string
   summonerLevel: number
@@ -158,6 +168,9 @@ export interface LiveStats {
   objectiveWindow: string
   positioningCue: string
   referenceNotes: string[]
+  csPaceTip: string
+  kpTip: string
+  visionTip: string
 }
 
 export interface PostGameSummary {
@@ -184,4 +197,7 @@ export interface RuntimeStatus {
   gameEvents: ProviderStatus
   lockfilePath: string | null
   lastError: string | null
+  enemyChampions: string[]
+  laneOpponent: string | null
+  matchup: MatchupInfo | null
 }

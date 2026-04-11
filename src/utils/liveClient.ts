@@ -9,6 +9,7 @@ export interface LiveClientSnapshot {
     championName: string
     isBot: boolean
     summonerName?: string
+    team?: string
     scores?: {
       kills: number
       deaths: number

@@ -23,7 +23,9 @@ import {
   detectAssignedRole,
   getOptionalJson,
   normalizeLobbyPreferences,
+  normalizeRoleId,
   parseLockfile,
+  CHAMPION_ID_TO_NAME,
   type LcuCredentials,
   type LcuChampSelectSession,
   type LcuCurrentSummoner,
@@ -43,6 +45,8 @@ import {
   isOverwolfAvailable,
   readFileUtf8,
 } from '../utils/overwolf'
+import { getMatchupData } from '../data/archetypes'
+import type { MatchupInfo } from '../types'
 
 interface RuntimeState {
   lobby: LobbyPreferences
@@ -50,6 +54,9 @@ interface RuntimeState {
   liveStats: LiveStats
   postGameSummary: PostGameSummary
   currentLeagueIdentity: CurrentLeagueIdentity | null
+  enemyChampions: string[]
+  laneOpponent: string | null
+  matchup: MatchupInfo | null
   status: RuntimeStatus
 }
 
@@ -69,6 +76,9 @@ const DEFAULT_STATE: RuntimeState = {
   liveStats: mockLiveStats,
   postGameSummary: mockPostGameSummary,
   currentLeagueIdentity: null,
+  enemyChampions: [],
+  laneOpponent: null,
+  matchup: null,
   status: DEFAULT_STATUS,
 }
 
@@ -209,6 +219,49 @@ function buildLiveStats(
       'Use it as a quick reminder layer during pauses in attention, not as a second minimap.',
       `${role.name} fundamentals still matter more than fancy reads when the game gets messy.`,
     ],
+    // Smart live tips based on actual stats
+    csPaceTip: (() => {
+      if (roleId === 'utility') return 'CS is not your priority as Support. Focus on vision control and protecting your carry.'
+      const minutesPlayed = seconds / 60
+      if (minutesPlayed < 2) return 'Game just started — focus on last-hitting every minion in the first wave.'
+      const csPerMin = cs / minutesPlayed
+      const expectedCs = Math.round(minutesPlayed * 8)
+      const csDiff = cs - expectedCs
+      if (csPerMin < 5)
+        return `You are ${Math.abs(csDiff)} CS below the 8/min pace. Last-hitting is your highest priority right now — nothing else matters as much.`
+      if (csPerMin < 7)
+        return `CS pace is ${csPerMin.toFixed(1)}/min — a bit below 8/min target. Stay on waves and only leave when there is nothing to last-hit.`
+      return `CS pace is ${csPerMin.toFixed(1)}/min — on track. Keep the wave discipline and look for fights between waves.`
+    })(),
+    kpTip: (() => {
+      const myKills = player?.scores?.kills ?? 0
+      const myAssists = player?.scores?.assists ?? 0
+      const teamKills = (snapshot.allPlayers ?? [])
+        .filter((p) => p.team === player?.team)
+        .reduce((sum, p) => sum + (p.scores?.kills ?? 0), 0)
+      const kp = teamKills > 0 ? Math.round(((myKills + myAssists) / teamKills) * 100) : 0
+      if (phase === 'Early')
+        return 'Early game — focus on your lane before tracking kill participation.'
+      if (kp < 25)
+        return `Kill participation is ${kp}%. You are missing too many fights. Check the minimap and move toward your team before objectives.`
+      if (kp < 45)
+        return `Kill participation at ${kp}%. Try to join one more skirmish per objective window.`
+      return `Kill participation is ${kp}% — solid. You are making yourself useful in fights. Keep it up.`
+    })(),
+    visionTip: (() => {
+      const minutesPlayed = seconds / 60
+      if (minutesPlayed < 3) return 'Place your starting ward in the bush that covers the most common gank path for your lane.'
+      const wardBenchmarks: Partial<Record<RoleId, number>> = {
+        utility: 1.5, jungle: 1.0, top: 0.5, middle: 0.6, bottom: 0.4,
+      }
+      const benchmark = wardBenchmarks[roleId] ?? 0.5
+      const actualWardsPerMin = vision / minutesPlayed
+      if (actualWardsPerMin < benchmark * 0.6)
+        return `Vision score is low for ${role.name}. Buy a Control Ward on your next back and place it at the next objective before it spawns.`
+      if (actualWardsPerMin < benchmark)
+        return `Vision is slightly below the ${role.name} benchmark. Add one more ward placement per minute around objectives.`
+      return `Vision score is on track for ${role.name}. Keep warding objective areas before they spawn.`
+    })(),
   }
 }
 
@@ -377,6 +430,11 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
         let nextPostGame = runtimeRef.current.postGameSummary
         let nextCurrentLeagueIdentity = runtimeRef.current.currentLeagueIdentity
 
+        // Matchup tracking
+        let nextEnemyChampions: string[] = runtimeRef.current.enemyChampions
+        let nextLaneOpponent: string | null = runtimeRef.current.laneOpponent
+        let nextMatchup: MatchupInfo | null = runtimeRef.current.matchup
+
         if (overwolfReady && !lcuRef.current) {
           const resolved = await resolveLcuCredentials(
             riotInstallPath,
@@ -468,6 +526,43 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
             if (mappedLiveStats) {
               nextLiveStats = mappedLiveStats
               liveClientStatus = 'connected'
+
+              // Detect enemies from live game data
+              if (liveClientSnapshot.allPlayers && liveClientSnapshot.allPlayers.length > 0) {
+                const myPlayerEntry = liveClientSnapshot.allPlayers.find(
+                  (p) => p.summonerName === liveClientSnapshot.activePlayer.summonerName,
+                )
+                const myTeamId = myPlayerEntry?.team ?? 'ORDER'
+                const enemies = liveClientSnapshot.allPlayers
+                  .filter((p) => p.team !== myTeamId && !p.isBot)
+                  .map((p) => p.championName)
+                  .filter(Boolean)
+                if (enemies.length > 0) {
+                  nextEnemyChampions = enemies
+                  // Keep champ-select opponent if already resolved, else use first enemy
+                  if (!nextLaneOpponent && enemies[0]) {
+                    nextLaneOpponent = enemies[0]
+                  }
+                  if (nextLaneOpponent) {
+                    const matchupData = getMatchupData(nextLaneOpponent)
+                    const phase = mappedLiveStats.currentPhase
+                    nextMatchup = {
+                      championName: matchupData.championName,
+                      archetype: matchupData.archetype,
+                      threatLevel: matchupData.threatLevel,
+                      tradingTip: matchupData.tradingTip,
+                      watchOut: matchupData.watchOut,
+                      winCondition: matchupData.winCondition,
+                      currentPhaseTip:
+                        phase === 'Mid'
+                          ? matchupData.phaseTips.mid
+                          : phase === 'Late'
+                          ? matchupData.phaseTips.late
+                          : matchupData.phaseTips.early,
+                    }
+                  }
+                }
+              }
             }
           } catch (error) {
             liveClientStatus = 'error'
@@ -482,6 +577,9 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
           liveStats: nextLiveStats,
           postGameSummary: nextPostGame,
           currentLeagueIdentity: nextCurrentLeagueIdentity,
+          enemyChampions: nextEnemyChampions,
+          laneOpponent: nextLaneOpponent,
+          matchup: nextMatchup,
           status: {
             overwolfAvailable: overwolfReady,
             leagueRunning,
@@ -490,6 +588,9 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
             gameEvents: gameEventsStatus,
             lockfilePath,
             lastError,
+            enemyChampions: nextEnemyChampions,
+            laneOpponent: nextLaneOpponent,
+            matchup: nextMatchup,
           },
         })
       } finally {
@@ -512,5 +613,11 @@ export function useLaneUpRuntime(quest: QuestState, riotInstallPath?: string) {
     }
   }, [quest, riotInstallPath])
 
-  return runtime
+  const runtimeWithMatchup = {
+    ...runtime,
+    enemyChampions: runtime.enemyChampions,
+    laneOpponent: runtime.laneOpponent,
+    matchup: runtime.matchup,
+  }
+  return runtimeWithMatchup
 }
