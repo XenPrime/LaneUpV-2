@@ -63,10 +63,16 @@ function formatRank(entries: LeagueEntry[] | undefined) {
   }
 }
 
-export function useLiveChampionSelect(pollMs = 2000) {
+const CHAMP_SELECT_PHASES = ['PLANNING', 'BAN_PICK', 'FINALIZATION', 'GAME_STARTING']
+
+export function useLiveChampionSelect(
+  pollMs = 2000,
+  onChampSelectStart?: () => void,
+) {
   const [participants, setParticipants] = useState<LiveParticipant[] | null>(null)
   const [phase, setPhase] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
+  const [previousPhase, setPreviousPhase] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -107,10 +113,24 @@ export function useLiveChampionSelect(pollMs = 2000) {
           }
         })
 
+        const newPhase = session.timer?.phase ?? ''
+
         if (!cancelled) {
           setParticipants(mapped)
-          setPhase(session.timer?.phase ?? '')
+          setPhase(newPhase)
           setError(null)
+
+          // Detect phase transition: trigger callback if we've moved to a champ-select phase
+          if (
+            onChampSelectStart &&
+            previousPhase !== null &&
+            !CHAMP_SELECT_PHASES.includes(previousPhase) &&
+            CHAMP_SELECT_PHASES.includes(newPhase)
+          ) {
+            onChampSelectStart()
+          }
+
+          setPreviousPhase(newPhase)
         }
       } catch (err) {
         if (!cancelled) {
@@ -132,7 +152,7 @@ export function useLiveChampionSelect(pollMs = 2000) {
         clearTimeout(timer)
       }
     }
-  }, [pollMs])
+  }, [pollMs, onChampSelectStart])
 
   const byTeam = useMemo(() => {
     if (!participants) return { allies: [], enemies: [] }

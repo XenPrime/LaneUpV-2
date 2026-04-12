@@ -18,6 +18,7 @@ import {
 } from './data/mockState'
 import { useRiotMatchHistory } from './hooks/useRiotMatchHistory'
 import { useLaneUpRuntime } from './hooks/useLaneUpRuntime'
+import { useLiveChampionSelect } from './hooks/useLiveChampionSelect'
 import { roles } from './data/roles'
 import type {
   PracticeJournalState,
@@ -165,6 +166,14 @@ function App() {
     riotAccount,
     riotHistoryLoadRequestCount,
   )
+
+  const handleChampSelectStart = () => {
+    if (activeScreen !== 'champ-select') {
+      setActiveScreen('champ-select')
+    }
+  }
+
+  const champSelectLive = useLiveChampionSelect(2000, handleChampSelectStart)
 
   const heroSummary = useMemo(() => {
     if (activeScreen === 'champ-select') {
