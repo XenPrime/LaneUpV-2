@@ -133,7 +133,7 @@ export function RoleGuideScreen({
         </article>
       </div>
 
-      {\!isSimple ? (
+      {!isSimple ? (
         <div className="two-column">
           <article className="panel">
             <p className="eyebrow">Good times to fight</p>
@@ -155,7 +155,7 @@ export function RoleGuideScreen({
         </div>
       ) : null}
 
-      {\!isSimple ? (
+      {!isSimple ? (
         <article className="panel">
           <p className="eyebrow">{role.synergyTitle}</p>
           <ul className="bullet-list">
@@ -204,7 +204,7 @@ export function RoleGuideScreen({
           </div>
         </article>
 
-        {\!isSimple ? (
+        {!isSimple ? (
           <article className="panel">
             <p className="eyebrow">Avoid if you're brand new</p>
             <div className="champion-list">
@@ -219,7 +219,7 @@ export function RoleGuideScreen({
         ) : null}
       </div>
 
-      {\!isSimple ? (
+      {!isSimple ? (
         <article className="panel footer-note-panel">
           <p>{role.footerNote}</p>
         </article>
