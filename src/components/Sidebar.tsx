@@ -4,6 +4,7 @@ const screens: Array<{ id: ScreenId; label: string; kicker: string }> = [
   { id: 'home', label: 'Home', kicker: 'Quest setup' },
   { id: 'guide', label: 'Role Guide', kicker: 'Learn fundamentals' },
   { id: 'builds', label: 'Stats & Builds', kicker: 'Champions and items' },
+  { id: 'runes', label: 'Rune Guide', kicker: 'Every path & keystone' },
   { id: 'profile', label: 'Profile', kicker: 'Progress and habits' },
   { id: 'faq', label: 'FAQ', kicker: 'Quick answers' },
   { id: 'champ-select', label: 'Champ Select', kicker: 'Role detection' },

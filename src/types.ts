@@ -4,6 +4,7 @@ export type ScreenId =
   | 'home'
   | 'guide'
   | 'builds'
+  | 'runes'
   | 'profile'
   | 'faq'
   | 'champ-select'

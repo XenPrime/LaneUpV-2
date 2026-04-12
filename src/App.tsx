@@ -8,6 +8,7 @@ import { InGameOverlayScreen } from './components/InGameOverlayScreen'
 import { PostGameScreen } from './components/PostGameScreen'
 import { ProfileScreen } from './components/ProfileScreen'
 import { RoleGuideScreen } from './components/RoleGuideScreen'
+import { RunesScreen } from './components/RunesScreen'
 import { SettingsScreen } from './components/SettingsScreen'
 import {
   initialQuestState,
@@ -117,6 +118,7 @@ function App() {
       'home',
       'guide',
       'builds',
+      'runes',
       'profile',
       'faq',
       'champ-select',
@@ -366,6 +368,8 @@ function App() {
         {resolvedScreen === 'builds' ? (
           <ChampionStatsScreen activeRole={guideRole} />
         ) : null}
+
+        {resolvedScreen === 'runes' ? <RunesScreen /> : null}
 
         {resolvedScreen === 'profile' ? (
           <ProfileScreen
