@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { roleOrder, roles } from '../data/roles'
 import type { RoleId } from '../types'
 
@@ -6,6 +7,7 @@ interface RoleGuideScreenProps {
   onSelectRole: (role: RoleId) => void
   guideMode: 'detailed' | 'simple'
   onToggleGuideMode: () => void
+  onBackToHome: () => void
 }
 
 export function RoleGuideScreen({
@@ -13,7 +15,21 @@ export function RoleGuideScreen({
   onSelectRole,
   guideMode,
   onToggleGuideMode,
+  onBackToHome,
 }: RoleGuideScreenProps) {
+  // Handle Escape key to go back to home
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onBackToHome()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onBackToHome])
+
   const role = roles[activeRole]
   const isSimple = guideMode === 'simple'
   const visibleSummary = isSimple ? role.simpleSummary : role.summary
@@ -28,6 +44,15 @@ export function RoleGuideScreen({
   return (
     <section className="screen-stack">
       <div className="section-header">
+        <button
+          type="button"
+          className="secondary-button home-button"
+          onClick={onBackToHome}
+          title="Back to home (Escape)"
+        >
+          Home
+        </button>
+
         <div>
           <p className="eyebrow">Role fundamentals</p>
           <h2>{role.name} guide</h2>
@@ -108,7 +133,7 @@ export function RoleGuideScreen({
         </article>
       </div>
 
-      {!isSimple ? (
+      {\!isSimple ? (
         <div className="two-column">
           <article className="panel">
             <p className="eyebrow">Good times to fight</p>
@@ -130,7 +155,7 @@ export function RoleGuideScreen({
         </div>
       ) : null}
 
-      {!isSimple ? (
+      {\!isSimple ? (
         <article className="panel">
           <p className="eyebrow">{role.synergyTitle}</p>
           <ul className="bullet-list">
@@ -179,7 +204,7 @@ export function RoleGuideScreen({
           </div>
         </article>
 
-        {!isSimple ? (
+        {\!isSimple ? (
           <article className="panel">
             <p className="eyebrow">Avoid if you're brand new</p>
             <div className="champion-list">
@@ -194,7 +219,7 @@ export function RoleGuideScreen({
         ) : null}
       </div>
 
-      {!isSimple ? (
+      {\!isSimple ? (
         <article className="panel footer-note-panel">
           <p>{role.footerNote}</p>
         </article>

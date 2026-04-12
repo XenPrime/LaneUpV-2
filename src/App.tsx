@@ -301,6 +301,7 @@ function App() {
             onSelectRole={setGuideRole}
             guideMode={guideMode}
             onToggleGuideMode={toggleGuideMode}
+            onBackToHome={() => setActiveScreen('home')}
           />
         ) : null}
 
