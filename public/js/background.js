@@ -3,12 +3,21 @@ let inGameWindowId = null
 let lcuCredentials = null
 let featureRetryTimeout = null
 
-overwolf.extensions.onAppLaunchTriggered.addListener(openDesktopWindow)
+overwolf.extensions.onAppLaunchTriggered.addListener((event) => {
+  const source = getLaunchSource(event)
+
+  if (source === 'gamelaunchevent') {
+    registerGameEvents()
+    openInGameWindow()
+    return
+  }
+
+  openDesktopWindow()
+})
 
 window.addEventListener('load', () => {
   registerHotkeys()
   checkIfGameAlreadyRunning()
-  openDesktopWindow()
 })
 
 overwolf.games.onGameLaunched.addListener((info) => {
@@ -47,7 +56,9 @@ function openDesktopWindow() {
     }
 
     desktopWindowId = result.window.id
-    overwolf.windows.restore(desktopWindowId, () => {})
+    overwolf.windows.restore(desktopWindowId, () => {
+      overwolf.windows.bringToFront(desktopWindowId, () => {})
+    })
   })
 }
 
@@ -128,6 +139,19 @@ function unregisterGameEvents() {
   clearTimeout(featureRetryTimeout)
   overwolf.games.events.onNewEvents.removeListener(onNewGameEvent)
   overwolf.games.events.onInfoUpdates2.removeListener(onInfoUpdate)
+}
+
+function getLaunchSource(event) {
+  if (!event || typeof event.origin !== 'string') {
+    return null
+  }
+
+  try {
+    const url = new URL(event.origin)
+    return url.searchParams.get('source')
+  } catch (_error) {
+    return null
+  }
 }
 
 function onNewGameEvent(data) {

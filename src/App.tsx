@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import './App.css'
 import { ChampionStatsScreen } from './components/ChampionStatsScreen'
 import { ChampionSelectScreen } from './components/ChampionSelectScreen'
@@ -16,11 +16,10 @@ import {
   mockLobbyPreferences,
   mockPostGameSummary,
 } from './data/mockState'
+import { roles } from './data/roles'
 import { useRiotMatchHistory } from './hooks/useRiotMatchHistory'
 import { useLaneUpRuntime } from './hooks/useLaneUpRuntime'
-import { roles } from './data/roles'
 import type {
-  GameflowState,
   PracticeJournalState,
   ProviderStatus,
   RiotAccountConfig,
@@ -62,6 +61,31 @@ function getRuntimeBanner(status: RuntimeStatus) {
   }
 
   return 'League detected. LaneUp2 is still attaching to local data sources.'
+}
+
+function getAutoScreen(
+  gameflowState: RuntimeStatus['gameflowState'],
+  activeScreen: ScreenId,
+): ScreenId | null {
+  switch (gameflowState) {
+    case 'ChampSelect':
+      return 'champ-select'
+    case 'GameStart':
+    case 'InProgress':
+      return 'in-game'
+    case 'WaitingForStats':
+    case 'PreEndOfGame':
+    case 'EndOfGame':
+      return 'post-game'
+    case 'Lobby':
+    case 'None':
+    case 'TerminatedInError':
+      return ['champ-select', 'in-game', 'post-game'].includes(activeScreen)
+        ? 'home'
+        : null
+    default:
+      return null
+  }
 }
 
 function App() {
@@ -162,44 +186,7 @@ function App() {
   )
   const [guideRole, setGuideRole] = useState<RoleId>(quest.activeRole ?? 'utility')
   const runtime = useLaneUpRuntime(quest, riotInstallPath)
-
-  // ── Gameflow auto-navigation ──────────────────────────────────────────
-  // Maps LCU gameflow states to app screens. When the state changes we
-  // automatically switch the active screen so the user never has to
-  // manually navigate between champion select, in-game, and post-game.
-  const prevGameflowRef = useRef<GameflowState>('None')
-  useEffect(() => {
-    const current = runtime.gameflowState
-    const prev = prevGameflowRef.current
-    if (current === prev) return
-    prevGameflowRef.current = current
-
-    switch (current) {
-      case 'ChampSelect':
-        setActiveScreen('champ-select')
-        break
-      case 'GameStart':
-      case 'InProgress':
-        setActiveScreen('in-game')
-        break
-      case 'WaitingForStats':
-      case 'PreEndOfGame':
-      case 'EndOfGame':
-        setActiveScreen('post-game')
-        break
-      case 'Lobby':
-      case 'None':
-      case 'TerminatedInError':
-        // Return to home only if we were in a game screen
-        if (['champ-select', 'in-game', 'post-game'].includes(activeScreen)) {
-          setActiveScreen('home')
-        }
-        break
-      default:
-        break
-    }
-  }, [runtime.gameflowState])
-  // ─────────────────────────────────────────────────────────────────────
+  const resolvedScreen = getAutoScreen(runtime.gameflowState, activeScreen) ?? activeScreen
 
   const riotMatchHistory = useRiotMatchHistory(
     riotAccount,
@@ -207,7 +194,7 @@ function App() {
   )
 
   const heroSummary = useMemo(() => {
-    if (activeScreen === 'champ-select') {
+    if (resolvedScreen === 'champ-select') {
       return getRuntimeBanner(runtime.status)
     }
 
@@ -217,7 +204,7 @@ function App() {
     }
 
     return `${role.name} quest active. ${getRuntimeBanner(runtime.status)}`
-  }, [activeScreen, quest.activeRole, runtime.status])
+  }, [quest.activeRole, resolvedScreen, runtime.status])
 
   const startQuest = () => {
     if (!selectedRole) {
@@ -277,21 +264,57 @@ function App() {
     setRiotHistoryLoadRequestCount((count) => count + 1)
   }
 
+  if (shellMode === 'in-game') {
+    return (
+      <div className="app-shell in-game-app-shell" data-theme={theme}>
+        <main className="content-shell in-game-content-shell">
+          <section className="in-game-shell-header">
+            <div>
+              <p className="eyebrow">LaneUp live companion</p>
+              <h1>Separate in-game tab</h1>
+            </div>
+            <div className="top-right-actions">
+              <span className="pill">
+                {formatProviderStatus('Live Client', runtime.status.liveClient)}
+              </span>
+              <label className="theme-toggle" aria-label="Toggle light and dark mode">
+                <span className="theme-toggle-label">
+                  {theme === 'light' ? 'Light' : 'Dark'}
+                </span>
+                <button
+                  type="button"
+                  className={`theme-toggle-switch ${theme === 'dark' ? 'dark' : ''}`}
+                  onClick={toggleTheme}
+                  aria-pressed={theme === 'dark'}
+                >
+                  <span className="theme-toggle-knob" />
+                </button>
+              </label>
+            </div>
+          </section>
+
+          <InGameOverlayScreen
+            liveStats={runtime.liveStats ?? mockLiveStats}
+            sourceLabel={formatProviderStatus('Live Client', runtime.status.liveClient)}
+            matchup={runtime.matchup}
+            laneOpponent={runtime.laneOpponent}
+          />
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="app-shell" data-theme={theme}>
       <main className="content-shell">
-        {activeScreen !== 'home' ? (
+        {resolvedScreen !== 'home' ? (
           <section className="top-banner">
             <div>
               <p className="eyebrow">Secondary coded prototype</p>
               <h2>LaneUp2 product shell</h2>
             </div>
             <div className="top-banner-actions">
-              <p className="top-banner-copy">
-                {shellMode === 'in-game'
-                  ? 'In-game Overwolf window mode. The overlay stays compact and focused on live guidance.'
-                  : heroSummary}
-              </p>
+              <p className="top-banner-copy">{heroSummary}</p>
               <div className="top-right-actions">
                 <label className="theme-toggle" aria-label="Toggle light and dark mode">
                   <span className="theme-toggle-label">
@@ -306,21 +329,19 @@ function App() {
                     <span className="theme-toggle-knob" />
                   </button>
                 </label>
-                {shellMode !== 'in-game' ? (
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={() => setActiveScreen('home')}
-                  >
-                    Home
-                  </button>
-                ) : null}
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setActiveScreen('home')}
+                >
+                  Home
+                </button>
               </div>
             </div>
           </section>
         ) : null}
 
-        {activeScreen === 'home' ? (
+        {resolvedScreen === 'home' ? (
           <HomeScreen
             quest={quest}
             selectedRole={selectedRole}
@@ -333,7 +354,7 @@ function App() {
           />
         ) : null}
 
-        {activeScreen === 'guide' ? (
+        {resolvedScreen === 'guide' ? (
           <RoleGuideScreen
             activeRole={guideRole}
             onSelectRole={setGuideRole}
@@ -342,11 +363,11 @@ function App() {
           />
         ) : null}
 
-        {activeScreen === 'builds' ? (
+        {resolvedScreen === 'builds' ? (
           <ChampionStatsScreen activeRole={guideRole} />
         ) : null}
 
-        {activeScreen === 'profile' ? (
+        {resolvedScreen === 'profile' ? (
           <ProfileScreen
             quest={quest}
             journal={journal}
@@ -354,9 +375,9 @@ function App() {
           />
         ) : null}
 
-        {activeScreen === 'faq' ? <FaqScreen /> : null}
+        {resolvedScreen === 'faq' ? <FaqScreen /> : null}
 
-        {activeScreen === 'champ-select' ? (
+        {resolvedScreen === 'champ-select' ? (
           <ChampionSelectScreen
             quest={quest}
             lobby={runtime.lobby ?? mockLobbyPreferences}
@@ -368,14 +389,16 @@ function App() {
           />
         ) : null}
 
-        {activeScreen === 'in-game' ? (
+        {resolvedScreen === 'in-game' ? (
           <InGameOverlayScreen
             liveStats={runtime.liveStats ?? mockLiveStats}
             sourceLabel={formatProviderStatus('Live Client', runtime.status.liveClient)}
+            matchup={runtime.matchup}
+            laneOpponent={runtime.laneOpponent}
           />
         ) : null}
 
-        {activeScreen === 'post-game' ? (
+        {resolvedScreen === 'post-game' ? (
           <PostGameScreen
             summary={runtime.postGameSummary ?? mockPostGameSummary}
             isMockData={runtime.status.lcu !== 'connected'}
@@ -387,7 +410,7 @@ function App() {
           />
         ) : null}
 
-        {activeScreen === 'settings' ? (
+        {resolvedScreen === 'settings' ? (
           <SettingsScreen
             runtimeStatus={runtime.status}
             riotAccount={riotAccount}

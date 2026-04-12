@@ -47,6 +47,14 @@ function formatStatus(status: RuntimeStatus[keyof RuntimeStatus]) {
     return String(status)
   }
 
+  if (Array.isArray(status)) {
+    return status.length > 0 ? status.join(', ') : 'None'
+  }
+
+  if (typeof status === 'object') {
+    return status ? 'Available' : 'None'
+  }
+
   return status
 }
 

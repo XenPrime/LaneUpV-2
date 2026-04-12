@@ -116,7 +116,7 @@ export function ChampionSelectScreen({
             </div>
             <div className="tip-card">
               <p className="eyebrow">Early game plan</p>
-              <p>{matchup.phaseTips?.early ?? matchup.currentPhaseTip}</p>
+              <p>{matchup.currentPhaseTip}</p>
             </div>
           </div>
 

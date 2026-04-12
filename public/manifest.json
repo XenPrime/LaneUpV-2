@@ -12,6 +12,7 @@
     "description": "Beginner-focused League of Legends companion app with role guidance, champion select coaching, and live overlays."
   },
   "permissions": ["GameEvents", "Hotkeys", "GameInfo", "FileSystem"],
+  "game_events": [5426],
   "hotkeys": {
     "toggle_app": {
       "title": "Toggle LaneUp2 desktop app",
@@ -37,12 +38,14 @@
     "background": {
       "file": "background.html",
       "is_background_page": true,
+      "is_startup_window": true,
       "transparent": true,
       "show_in_taskbar": false,
       "size": { "width": 0, "height": 0 }
     },
     "desktop": {
       "file": "windows/desktop.html",
+      "is_main_window": true,
       "transparent": false,
       "resizable": true,
       "show_minimize": true,

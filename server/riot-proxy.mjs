@@ -153,6 +153,43 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload))
 }
 
+async function proxyLocalRequest({
+  response,
+  url,
+  headers = {},
+  emptyErrorMessage,
+}) {
+  try {
+    const localResponse = await fetch(url, { headers })
+    const body = await localResponse.text()
+
+    if (!localResponse.ok) {
+      sendJson(response, localResponse.status, {
+        error:
+          body.trim().length > 0
+            ? body
+            : emptyErrorMessage ?? `Local request returned ${localResponse.status}.`,
+      })
+      return
+    }
+
+    response.writeHead(localResponse.status, {
+      'Content-Type': localResponse.headers.get('content-type') || 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    })
+    response.end(body)
+  } catch (requestError) {
+    sendJson(response, 502, {
+      error:
+        requestError instanceof Error
+          ? requestError.message
+          : 'Unable to call the local endpoint.',
+    })
+  }
+}
+
 function getTargetUrl(requestUrl) {
   const incomingUrl = new URL(requestUrl, `http://localhost:${PORT}`)
   const host = incomingUrl.searchParams.get('host')
@@ -228,44 +265,111 @@ const server = createServer(async (request, response) => {
       return
     }
 
-    try {
-      const auth = Buffer.from(`:${lcu.password}`).toString('base64')
-      const lcuResponse = await fetch(
-        `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-summoner/v1/current-summoner`,
-        {
-          headers: {
-            Authorization: `Basic ${auth}`,
-          },
-        },
-      )
+    const auth = Buffer.from(`riot:${lcu.password}`).toString('base64')
+    await proxyLocalRequest({
+      response,
+      url: `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-summoner/v1/current-summoner`,
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+      emptyErrorMessage: 'League client identity request failed.',
+    })
+    return
+  }
 
-      const body = await lcuResponse.text()
+  if (request.url?.startsWith('/lcu/lobby')) {
+    const incomingUrl = new URL(request.url, `http://localhost:${PORT}`)
+    const installPathOverride = incomingUrl.searchParams.get('installPath') || undefined
+    const lcu = resolveLcuFromDisk(installPathOverride)
 
-       if (!lcuResponse.ok) {
-        sendJson(response, lcuResponse.status, {
-          error:
-            body.trim().length > 0
-              ? body
-              : `League client identity request returned ${lcuResponse.status}.`,
-        })
-        return
-      }
-
-      response.writeHead(lcuResponse.status, {
-        'Content-Type': lcuResponse.headers.get('content-type') || 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+    if (!lcu) {
+      sendJson(response, 404, {
+        error: 'League client lockfile not found on disk.',
       })
-      response.end(body)
-    } catch (requestError) {
-      sendJson(response, 502, {
-        error:
-          requestError instanceof Error
-            ? requestError.message
-            : 'Unable to call the local League client endpoint.',
-      })
+      return
     }
+
+    const auth = Buffer.from(`riot:${lcu.password}`).toString('base64')
+    await proxyLocalRequest({
+      response,
+      url: `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-lobby/v2/lobby`,
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+      emptyErrorMessage: 'League lobby request failed.',
+    })
+    return
+  }
+
+  if (request.url?.startsWith('/lcu/champ-select')) {
+    const incomingUrl = new URL(request.url, `http://localhost:${PORT}`)
+    const installPathOverride = incomingUrl.searchParams.get('installPath') || undefined
+    const lcu = resolveLcuFromDisk(installPathOverride)
+
+    if (!lcu) {
+      sendJson(response, 404, {
+        error: 'League client lockfile not found on disk.',
+      })
+      return
+    }
+
+    const auth = Buffer.from(`riot:${lcu.password}`).toString('base64')
+    await proxyLocalRequest({
+      response,
+      url: `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-champ-select/v1/session`,
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+      emptyErrorMessage: 'Champion select request failed.',
+    })
+    return
+  }
+
+  if (request.url?.startsWith('/lcu/eog-stats')) {
+    const incomingUrl = new URL(request.url, `http://localhost:${PORT}`)
+    const installPathOverride = incomingUrl.searchParams.get('installPath') || undefined
+    const lcu = resolveLcuFromDisk(installPathOverride)
+
+    if (!lcu) {
+      sendJson(response, 404, {
+        error: 'League client lockfile not found on disk.',
+      })
+      return
+    }
+
+    const auth = Buffer.from(`riot:${lcu.password}`).toString('base64')
+    await proxyLocalRequest({
+      response,
+      url: `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-end-of-game/v1/eog-stats-block`,
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+      emptyErrorMessage: 'End-of-game stats request failed.',
+    })
+    return
+  }
+
+  if (request.url?.startsWith('/lcu/gameflow-phase')) {
+    const incomingUrl = new URL(request.url, `http://localhost:${PORT}`)
+    const installPathOverride = incomingUrl.searchParams.get('installPath') || undefined
+    const lcu = resolveLcuFromDisk(installPathOverride)
+
+    if (!lcu) {
+      sendJson(response, 404, {
+        error: 'League client lockfile not found on disk.',
+      })
+      return
+    }
+
+    const auth = Buffer.from(`riot:${lcu.password}`).toString('base64')
+    await proxyLocalRequest({
+      response,
+      url: `${lcu.protocol}://127.0.0.1:${lcu.port}/lol-gameflow/v1/gameflow-phase`,
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+      emptyErrorMessage: 'League gameflow request failed.',
+    })
     return
   }
 
@@ -279,44 +383,24 @@ const server = createServer(async (request, response) => {
       return
     }
 
-    try {
-      const auth = Buffer.from(`riot:${riotClient.password}`).toString('base64')
-      const riotClientResponse = await fetch(
-        `${riotClient.protocol}://127.0.0.1:${riotClient.port}/player-account/aliases/v1/active`,
-        {
-          headers: {
-            Authorization: `Basic ${auth}`,
-          },
-        },
-      )
+    const auth = Buffer.from(`riot:${riotClient.password}`).toString('base64')
+    await proxyLocalRequest({
+      response,
+      url: `${riotClient.protocol}://127.0.0.1:${riotClient.port}/player-account/aliases/v1/active`,
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+      emptyErrorMessage: 'Riot Client alias request failed.',
+    })
+    return
+  }
 
-      const body = await riotClientResponse.text()
-
-      if (!riotClientResponse.ok) {
-        sendJson(response, riotClientResponse.status, {
-          error:
-            body.trim().length > 0
-              ? body
-              : `Riot Client alias request returned ${riotClientResponse.status}.`,
-        })
-        return
-      }
-
-      response.writeHead(riotClientResponse.status, {
-        'Content-Type': riotClientResponse.headers.get('content-type') || 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      })
-      response.end(body)
-    } catch (requestError) {
-      sendJson(response, 502, {
-        error:
-          requestError instanceof Error
-            ? requestError.message
-            : 'Unable to call the local Riot Client alias endpoint.',
-      })
-    }
+  if (request.url === '/liveclient/allgamedata') {
+    await proxyLocalRequest({
+      response,
+      url: 'http://127.0.0.1:2999/liveclientdata/allgamedata',
+      emptyErrorMessage: 'Live Client request failed.',
+    })
     return
   }
 

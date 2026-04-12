@@ -75,6 +75,12 @@ export const mockLiveStats: LiveStats = {
     'If wave is not secure, default back to farm before trying to move first.',
     'Your safest contribution is poke plus follow-up from behind your frontline.',
   ],
+  csPaceTip:
+    'CS pace is behind ideal mid-lane tempo, so wave cleanup is still one of the safest ways to improve this game.',
+  kpTip:
+    'Kill participation is healthy enough to matter, but there is still room to arrive faster on objective fights.',
+  visionTip:
+    'Vision score is on pace for a utility-heavy game, but one earlier ward before the next objective would make setup cleaner.',
 }
 
 export const mockPostGameSummary: PostGameSummary = {

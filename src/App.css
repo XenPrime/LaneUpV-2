@@ -100,6 +100,31 @@
   margin: 0 auto;
 }
 
+.in-game-app-shell {
+  --bg-primary:
+    radial-gradient(circle at top left, rgba(34, 211, 238, 0.12), transparent 22%),
+    linear-gradient(180deg, #07111f, #0a1423 46%, #050c17);
+}
+
+.in-game-content-shell {
+  max-width: 1180px;
+  padding-top: 1rem;
+}
+
+.in-game-shell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  border-radius: 1.35rem;
+  border: 1px solid rgba(56, 189, 248, 0.16);
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.14), transparent 28%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.92), rgba(6, 14, 25, 0.94));
+  padding: 1rem 1.1rem;
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28);
+}
+
 .top-banner,
 .panel,
 .hero-panel,
@@ -519,6 +544,35 @@
   display: flex;
   flex-direction: column;
   gap: 1.2rem;
+}
+
+.in-game-screen-stack {
+  gap: 1rem;
+}
+
+.in-game-window-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.in-game-window-copy {
+  margin: 0.45rem 0 0;
+  max-width: 34rem;
+}
+
+.overlay-tab-row {
+  margin-top: -0.1rem;
+}
+
+.in-game-window-panel {
+  border-radius: 1.35rem;
+  border-color: rgba(56, 189, 248, 0.14);
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.1), transparent 28%),
+    linear-gradient(180deg, rgba(6, 14, 25, 0.98), rgba(12, 20, 35, 0.96)),
+    #09111d;
 }
 
 .section-header,

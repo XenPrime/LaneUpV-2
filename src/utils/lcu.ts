@@ -257,7 +257,6 @@ export const CHAMPION_ID_TO_NAME: Record<number, string> = {
   711: 'Vex', 777: 'Yone', 875: 'Sett', 876: 'Lillia', 887: 'Gwen',
   888: 'Renata Glasc', 893: 'Aurora', 895: 'Nilah', 897: "K'Sante",
   901: 'Smolder', 902: 'Milio', 910: 'Hwei', 950: 'Naafiri',
-  10: 'Kayle', 875: 'Sett', 163: 'Taliyah', 420: 'Illaoi',
 }
 
 // Gameflow state — the LCU's authoritative current screen/state string
