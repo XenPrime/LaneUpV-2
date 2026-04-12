@@ -1118,7 +1118,11 @@ export const CHAMPION_ARCHETYPE_MAP: Record<string, Archetype> = {
   Zoe: 'Mage',
   Zyra: 'Enchanter',
   "K'Sante": 'Tank',
-  Aurora: 'Assassin',
+  "Rek'Sai": 'Skirmisher',
+  Skarner: 'Tank',
+  Mel: 'Mage',
+  Yunara: 'Enchanter',
+  Zaahen: 'EngageSupport',
 }
 
 // ── LOOKUP FUNCTION ────────────────────────────────────────────────────────
