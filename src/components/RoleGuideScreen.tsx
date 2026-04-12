@@ -220,71 +220,73 @@ export function RoleGuideScreen({
         ) : null}
       </div>
 
-      {!isSimple ? (
-        <article className="panel footer-note-panel">
-          <p>{role.footerNote}</p>
+      <div className="two-column">
+        {!isSimple ? (
+          <article className="panel footer-note-panel">
+            <p>{role.footerNote}</p>
+          </article>
+        ) : <div />}
+
+        <article className="panel">
+          <p className="eyebrow">Rune paths</p>
+          <div className="rune-paths-grid">
+            {runePaths.map((path) => (
+              <div key={path.id} className="rune-path-card">
+                <h3>{path.name}</h3>
+                <p className="rune-path-description">{path.description}</p>
+
+                <div className="rune-section">
+                  <h4 className="rune-row-label">Keystones</h4>
+                  <div className="rune-list">
+                    {path.keystones.map((rune) => (
+                      <div key={rune.name} className="rune-item">
+                        <strong>{rune.name}</strong>
+                        <p>{rune.explanation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rune-section">
+                  <h4 className="rune-row-label">Row 1</h4>
+                  <div className="rune-list">
+                    {path.row1.map((rune) => (
+                      <div key={rune.name} className="rune-item">
+                        <strong>{rune.name}</strong>
+                        <p>{rune.explanation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rune-section">
+                  <h4 className="rune-row-label">Row 2</h4>
+                  <div className="rune-list">
+                    {path.row2.map((rune) => (
+                      <div key={rune.name} className="rune-item">
+                        <strong>{rune.name}</strong>
+                        <p>{rune.explanation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rune-section">
+                  <h4 className="rune-row-label">Row 3</h4>
+                  <div className="rune-list">
+                    {path.row3.map((rune) => (
+                      <div key={rune.name} className="rune-item">
+                        <strong>{rune.name}</strong>
+                        <p>{rune.explanation}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </article>
-      ) : null}
-
-      <article className="panel">
-        <p className="eyebrow">Rune paths</p>
-        <div className="rune-paths-grid">
-          {runePaths.map((path) => (
-            <div key={path.id} className="rune-path-card">
-              <h3>{path.name}</h3>
-              <p className="rune-path-description">{path.description}</p>
-
-              <div className="rune-section">
-                <h4 className="rune-row-label">Keystones</h4>
-                <div className="rune-list">
-                  {path.keystones.map((rune) => (
-                    <div key={rune.name} className="rune-item">
-                      <strong>{rune.name}</strong>
-                      <p>{rune.explanation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rune-section">
-                <h4 className="rune-row-label">Row 1</h4>
-                <div className="rune-list">
-                  {path.row1.map((rune) => (
-                    <div key={rune.name} className="rune-item">
-                      <strong>{rune.name}</strong>
-                      <p>{rune.explanation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rune-section">
-                <h4 className="rune-row-label">Row 2</h4>
-                <div className="rune-list">
-                  {path.row2.map((rune) => (
-                    <div key={rune.name} className="rune-item">
-                      <strong>{rune.name}</strong>
-                      <p>{rune.explanation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rune-section">
-                <h4 className="rune-row-label">Row 3</h4>
-                <div className="rune-list">
-                  {path.row3.map((rune) => (
-                    <div key={rune.name} className="rune-item">
-                      <strong>{rune.name}</strong>
-                      <p>{rune.explanation}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </article>
+      </div>
     </section>
   )
 }
