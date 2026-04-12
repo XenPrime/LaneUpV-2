@@ -45,8 +45,8 @@ export function useLiveLobby(pollMs = 4000) {
       try {
         const lobby = await fetchFromLcuProxy<LobbyResponse>('/lcu/lobby')
         const me = lobby.members?.find((m) => m.isLocalPlayer) ?? lobby.members?.[0]
-        const first = mapRole(me?.positionPreferences?.firstPreference) ?? undefined
-        const second = mapRole(me?.positionPreferences?.secondPreference) ?? undefined
+        const first = mapRole(me?.positionPreferences?.firstPreference ?? null)
+        const second = mapRole(me?.positionPreferences?.secondPreference ?? null)
 
         if (!cancelled) {
           if (first && second) {
